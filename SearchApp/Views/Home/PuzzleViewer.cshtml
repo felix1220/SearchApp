@@ -1,0 +1,1624 @@
+﻿
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>PuzzleViewer</title>
+    <style>
+
+        canvas {
+            position: absolute;
+            border: 1px solid black;
+        }
+
+        #wordPanel {
+            position: absolute;
+            top: 20px;
+            width: 80%;
+            z-index: 1000;
+            font-size: 2.5em;
+            margin-left: 30px;
+            display: none;
+            background-color: white;
+            border: 1px solid black;
+        }
+
+        #togglePanel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            font-family: Arial, Helvetica, sans-serif
+            /*margin-bottom: 200px;*/
+        }
+        #pencilPanel{
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            z-index:100;
+
+        }
+        /* The switch - the box around the slider */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 27px;
+        }
+
+            /* Hide default HTML checkbox */
+            .switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+        /* The slider */
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+
+            .slider:before {
+                position: absolute;
+                content: "";
+                height: 20px;
+                width: 20px;
+                left: 4px;
+                bottom: 4px;
+                background-color: white;
+                -webkit-transition: .4s;
+                transition: .4s;
+            }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked + .slider:before {
+            -webkit-transform: translateX(26px);
+            -ms-transform: translateX(26px);
+            transform: translateX(26px);
+        }
+
+        /* Rounded sliders */
+        .slider.round {
+            border-radius: 34px;
+        }
+
+            .slider.round:before {
+                border-radius: 50%;
+            }
+    </style>
+</head>
+<body>
+    <div id="togglePanel">
+        <label class="switch">
+            <input type="checkbox" id="toggleCheck" onchange="toggleMsg(this)">
+            <span class="slider round"></span>
+        </label>
+        <span id="sliderMsg">
+            Move Puzzle
+        </span>
+    </div>
+    <div id="pencilPanel">
+        <span>
+            <img id="pencilHighLight" src="~/Content/images/big-pencil-small-x.png" />
+            
+        </span>
+    </div>
+    <div style="float:left;width:70%">
+        <canvas id="canvas" width="500" height="500"></canvas>
+    </div>
+    <div style="float:right;width:15%">
+        <button id="btnRefreshSection">Refresh Section</button>
+    </div>
+    <script src="~/Scripts/jquery-3.3.1.min.js"></script>
+    <script>
+        var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext("2d");
+        var mouseIsDown = false;
+        let scene = {};
+        let fullDistance = 0;
+        let boundaryPts = {};
+        let boardSections = [];
+        let mappings = {};
+        let gridPos = '';
+        let verticalLimit = 0;
+        let horizontalLimit = 0;
+        let groupOfWords = null;
+        let displafyWord = '';
+        let highlightReady = false;
+
+        var sectionStruct = function () {
+            return {
+                section: null,
+                direction: [],
+                letter: [],
+                corners: null,
+                sectionId: '',
+                startPt: undefined
+            }
+        };
+        var wordStruct = function () {
+            return {
+                section: null,
+                beginHighlight: false,
+                currentSection: '',
+                sections: [],
+                sectionsInFocus:[],
+                startPt: undefined,
+                currentSectionId: -1
+            }
+        };
+        var Point2D = function (x, y) {
+            return {
+                x: x,
+                y: y
+            };
+        };
+        const toggleMsg = (checkboxElem) => {
+            // alert(checkboxElem.checked);
+            if (checkboxElem.checked) {
+                //debugger;
+                $('#sliderMsg').text('Zoom In');
+            }
+            else {
+                $('#sliderMsg').text('Move Puzzle');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawRectsScene();
+                drawBigWordOutline(false);
+                mouseIsDown = false;
+                initialZoomDown = new Point2D(0, 0);
+                highlightReady = false;
+                $('#pencilHighLight').prop('src', '/Content/images/big-pencil-small-x.png');
+            }
+
+        }
+        const BasicRect = () => {
+            return {
+                id: 0,
+                x: 10,
+                y: 10,
+                deltaX: 0,
+                deltaY: 0,
+                width: 12,
+                height: 12,
+                outline: false,
+                boundTo: -1,
+                letter: 'A',
+                offCenterX: 0,
+                offCenterY: 0,
+                direction: -1,
+                sectionIn: '',
+                isFound: false,
+                font: 'bold 14px Courier',
+                box: {
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0
+                },
+                color: {
+                    red: 0,
+                    green: 0,
+                    blue: 0
+                },
+                rollBackRect: null
+            };
+        }
+        let initialDown = new Point2D(0, 0);
+        let initialZoomDown = new Point2D(0, 0);
+        const findSquareArea = (pt) => {
+            for (var key in scene) {
+                if (scene.hasOwnProperty(key)) {
+                    let scenePt = scene[key].PuzzleBoard.findIndex(rect => { return rect.x >= pt.x && rect.y >= pt.y });
+                    //  debugger;
+                    if (scenePt > -1) {
+                        let leftColumn = scenePt - (scene[key].Modulus + 1) * 4;
+                        let rightColumn = scenePt + (scene[key].Modulus + 1) * 4;
+                        let bottomColumn = scenePt + 4;
+                        let topColumn = scenePt - 4;
+                        let topLeftIndex = leftColumn - 6;
+                        let topRightIndex = rightColumn - 6;
+                        let bottomLeftIndex = leftColumn + 6;
+                        let bottomRightIndex = rightColumn + 6;
+                        return {
+                            topLeftIndex: topLeftIndex,
+                            topRightIndex: topRightIndex,
+                            bottomLeftIndex: bottomLeftIndex,
+                            bottomRightIndex: bottomRightIndex,
+                            scene: key
+                        }
+                    }
+
+                }
+
+            }
+            return undefined;
+
+        }
+        canvas.onmouseup = function (evt) {
+            if (!$('#toggleCheck').prop('checked')) {
+                mouseIsDown = false;
+
+            }
+
+            if (groupOfWords) {
+                groupOfWords.beginHighlight = false;
+                groupOfWords.sectionsInFocus = rectsInViewPort();
+            }
+            //refreshCanvas();
+        };
+        canvas.onmousedown = (e) => {
+            var currPos = getMousePos(e);
+            initialDown = new Point2D(currPos.x, currPos.y);
+            initialZoomDown = new Point2D(currPos.x, currPos.y);
+
+            let positions = gridPos.split(',');
+            let index1 = parseInt(positions[0]);
+            let index2 = parseInt(positions[1]);
+            let width = canvas.width;
+            let height = canvas.height;
+            let blockWidth = width / 8;
+            let blockHeight = height / 12;
+            let startX = 0;
+            let startY = 0;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if ($('#toggleCheck').prop('checked')) {
+                if (!mouseIsDown && !groupOfWords)
+                    groupOfWords = new wordStruct();
+
+                if (mouseIsDown) {
+                    groupOfWords.sections[groupOfWords.currentSectionId].letter.push([]);
+                    groupOfWords.sections[groupOfWords.currentSectionId].direction = [];
+                   // console.log('----On Mouse Down-----');
+                   // console.log(groupOfWords.sections[groupOfWords.sections.length - 1]);
+                   
+                    let deltaX = currPos.x - initialZoomDown.x;
+                    let deltaY = currPos.y - initialZoomDown.y;
+                    
+                    let indices = groupOfWords.currentSection.split(',');
+                    // buildLargeScene(parseInt(indices[0]), parseInt(indices[1]), width, height, deltaX, deltaY, true);
+                    // groupOfWords.sections[0].corners = drawSubSection(groupOfWords.section, blockWidth, blockHeight, deltaX, deltaY, false);
+                    groupOfWords.startPt.x += deltaX;
+                    groupOfWords.startPt.y += deltaY;
+                    drawSubSectionSimple(groupOfWords.section, blockWidth, blockHeight, groupOfWords.startPt);
+                    buildLargeScene(index1, index2, width, height, groupOfWords.startPt);
+                    drawBigWordOutline(true, groupOfWords.sections, 0, 0);
+                    initialZoomDown = new Point2D(currPos.x, currPos.y);
+                    groupOfWords.beginHighlight = true;
+                    groupOfWords.sectionsInFocus = rectsInViewPort();
+                    // console.log(groupOfWords.section[0]);
+
+                }
+                else {
+
+            
+                    groupOfWords.section = boardSections[index1][index2];
+                    groupOfWords.currentSection = index1 + ',' + index2;
+                   
+                    if (groupOfWords.sections.length === 0) {
+                        groupOfWords.currentSectionId = 0;
+                    }
+                    else {
+                       
+                        groupOfWords.sections.forEach((section, index) => {
+                           // section.forEach((column, index) => {
+                            const foundIdx = section.sectionId === groupOfWords.currentSection;
+
+                                if (foundIdx) {
+                                    groupOfWords.currentSectionId = index;
+                                }
+
+                            //});
+                        });
+                    }
+                   
+                    if (!findIfSectionExists(groupOfWords.currentSection, groupOfWords.sections)) {
+                        
+                        let subSection = new sectionStruct();
+                        //subSection.letter.push([]);
+                        //subSection.direction = [];
+                        subSection.sectionId = index1 + ',' + index2;
+                        subSection.section = boardSections[index1][index2];
+                        groupOfWords.sections.push(subSection);
+                    }
+                    
+                   
+                    groupOfWords.startPt = new Point2D(groupOfWords.section[0][0].zoomX, groupOfWords.section[0][0].zoomY);
+                    drawSubSectionSimple(groupOfWords.section, blockWidth, blockHeight, groupOfWords.startPt);
+                    buildLargeScene(index1, index2, width, height, groupOfWords.startPt);
+                    drawBigWordOutline(true, groupOfWords.sections, 0, 0);
+                    //groupOfWords.sections[0].corners = drawSubSection(groupOfWords.section, blockWidth, blockHeight, 0, 0, true);
+
+
+                }
+
+
+
+            }
+            else {
+                drawRectsScene();
+            }
+            mouseIsDown = true;
+        }
+        canvas.onmousemove = (evt) => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let pt = getMousePos(evt);
+            let width = canvas.width;
+            let height = canvas.height;
+            let blockWidth = width / 8;
+            let blockHeight = height / 12;
+
+            if (mouseIsDown && $('#toggleCheck').prop('checked')) {
+                if (groupOfWords.beginHighlight && !highlightReady) {
+
+                    let deltaX = pt.x - initialZoomDown.x;
+                    let deltaY = pt.y - initialZoomDown.y;
+                    groupOfWords.startPt.x += deltaX;
+                    groupOfWords.startPt.y += deltaY;
+                    // buildLargeScene(parseInt(indices[0]), parseInt(indices[1]), width, height, deltaX, deltaY, true);
+
+                    initialZoomDown = new Point2D(pt.x, pt.y);
+                    console.log('deltas', deltaX, deltaY);
+                }
+                else if (groupOfWords.beginHighlight && highlightReady) {
+                    const currentSection = groupOfWords.sections[groupOfWords.currentSectionId];
+                    // console.log(currentSection.letter);
+                    let entry = (currentSection.letter.length === 0) ? currentSection.letter[0] : currentSection.letter[currentSection.letter.length - 1];
+                    
+                    // console.log(entry);
+                   
+                   
+                    //console.log(pt.x, pt.y);
+                   // currentSection.section.forEach(column => {
+                    // column.forEach(rect => {
+                    groupOfWords.sectionsInFocus.forEach(rect => {
+                        //console.log(rect);
+                        // console.log(rect.zoomX < pt.x, rect.zoomX, pt.x);
+                        if (rect.zoomX < pt.x && pt.x < (rect.zoomX + blockWidth) &&
+                            (rect.zoomY - blockHeight) < pt.y && pt.y < rect.zoomY) {
+
+                            let foundIdx = entry.findIndex(x => x.id === rect.id);
+                            // debugger;
+                            if (foundIdx < 0) {
+                                entry.push(rect);
+                                currentSection.direction.push(String(rect.x) + ',' + String(rect.y));
+                            }
+                        }
+                    });
+                       // });
+                    // });
+                   // console.log("----In the hightlight---");
+                  //  console.log(entry);
+                    if (entry && entry.length >= 2) {
+                        let matches = findConsenus(entry);
+                        entry[0].direction = matches[0];
+                    }
+
+                }
+                let indices = groupOfWords.currentSection.split(',');
+               
+                drawSubSectionSimple(groupOfWords.section, blockWidth, blockHeight, groupOfWords.startPt);
+                buildLargeScene(parseInt(indices[0]), parseInt(indices[1]), width, height, groupOfWords.startPt);
+                drawBigWordOutline(true, groupOfWords.sections, groupOfWords.startPt.x, groupOfWords.startPt.y);
+               
+               /* if (groupOfWords.startPt.x > 0)
+                    console.log('Positive X...', groupOfWords.startPt.x);
+                if (groupOfWords.startPt.y > 0)
+                    console.log('Positive Y...', groupOfWords.startPt.y);*/
+            }
+            else if ($('#toggleCheck').prop('checked') && !mouseIsDown) {
+                // boundaryPts = findSquareArea(pt);
+                //console.log(pt);
+                let pickedFrom = null, pickedTo = null;
+                for (var sKey in scene) {
+                    let board = scene[sKey].PuzzleBoard;
+                    let block = scene[sKey].Plan.Font + scene[sKey].Plan.Spacing;
+                    for (var key in mappings) {
+                        let boxIndices = key.split(',');
+                        let topIndex = parseInt(boxIndices[0]);
+                        let bottomIndex = parseInt(boxIndices[1]);
+                        let fromPts = new Point2D(board[topIndex].x, board[topIndex].y - block);
+                        let toPts = new Point2D(board[bottomIndex].x + block, board[bottomIndex].y);
+                        // console.log(pt, fromPts, toPts);
+                        if (pt.x >= fromPts.x && pt.x <= toPts.x && pt.y >= fromPts.y && pt.y <= toPts.y) {
+                            pickedFrom = fromPts;
+                            pickedTo = toPts;
+                            gridPos = mappings[key]
+                            break;
+                        }
+
+                    }
+                    if (pickedFrom && pickedTo) {
+
+                        let topRightPoint = new Point2D(pickedTo.x, pickedFrom.y);
+                        let bottomLeftPoint = new Point2D(pickedFrom.x, pickedTo.y);
+                        drawBoundaryNew(pickedFrom, topRightPoint, bottomLeftPoint, pickedTo);
+                    }
+                }
+                if (groupOfWords)
+                    drawBigWordOutline(false);
+                // if (boundaryPts)
+                //drawBoundary(boundaryPts.topLeftIndex, boundaryPts.topRightIndex, boundaryPts.bottomLeftIndex, boundaryPts.bottomRightIndex, boundaryPts.scene);
+            }
+            else if (mouseIsDown && !$('#toggleCheck').prop('checked')) {
+                let deltaX = pt.x - initialDown.x;
+                let deltaY = pt.y - initialDown.y;
+                initialDown = new Point2D(pt.x, pt.y);
+                updateRectPositions(deltaX, deltaY);
+            }
+            if (!(mouseIsDown && $('#toggleCheck').prop('checked'))) {
+                drawRectsScene();
+                if (groupOfWords)
+                    drawBigWordOutline(false, '');
+            }
+        }
+        const findIfSectionExists = (inCommingId, sections) => {
+           return (sections.find(sec => sec.sectionId === inCommingId)) ? true : false;
+        }
+        const getSectionPos = (incomingSectionId) => {
+            const foundPos = -1;
+            groupOfWords.sections.forEach((section, index) => {
+              
+                const foundIdx = section.sectionId === incomingSectionId;
+
+                if (foundIdx) {
+                    foundPos = index;
+                    return;
+                }
+
+               
+            });
+            return foundPos;
+        }
+        const findConsenus = (rects) => {
+            let results = [];
+            if (rects.length === 2) {
+                let findMatch = compareDirectionRects(rects[0], rects[1]);
+                results.push(findMatch);
+                results.push(findMatch);
+            }
+            else if (rects.length === 3) {
+                let findMatch = compareDirectionRects(rects[0], rects[2]);
+                results.push(findMatch);
+                results.push(findMatch);
+            }
+            else {
+                let midPt = Math.floor(rects.length / 2);
+                let match1 = compareDirectionRects(rects[0], rects[midPt]);
+                let match2 = compareDirectionRects(rects[0], rects[rects.length - 1]);
+                results.push(match1, match2);
+            }
+
+            return results;
+        }
+        const buildLargeScene = (index1, index2, width, height, startPt) => {
+            let blockWidth = width / 8;
+            let blockHeight = height / 12;
+            let sectionStruct = undefined;
+            //console.log('The indices...', index1, index2);
+            if (index1 > 0 && index2 > 0 && index1 < boardSections.length - 1 && index2 + 1 < boardSections[index1].length) {//general interior
+                sectionStruct = generateStartPts(1, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(2, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(3, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(4, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(5, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(6, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(7, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(8, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+            }
+            else if (index2 === 0) {//top row
+                if (index1 > 0 && index1 !== boardSections.length - 1) {
+                    //console.log('In between square...');
+                    sectionStruct = generateStartPts(7, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                    sectionStruct = generateStartPts(5, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                    sectionStruct = generateStartPts(6, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                    sectionStruct = generateStartPts(4, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                }
+                else if (index1 === boardSections.length - 1) {
+                   // console.log('Should be last square...');
+                    sectionStruct = generateStartPts(7, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                    sectionStruct = generateStartPts(5, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+
+                }
+                else if (index1 === 0) {
+                    
+                    sectionStruct = generateStartPts(6, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                   sectionStruct = generateStartPts(4, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                }
+                sectionStruct = generateStartPts(8, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+
+            }
+            else if (index1 === 0 && index2 < boardSections[index2].length - 1) {//left column
+               
+                sectionStruct = generateStartPts(1, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(2, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(6, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(4, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+
+                sectionStruct = generateStartPts(8, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+            }
+            else if (index1 < boardSections.length - 1 && index2 === boardSections[index1].length - 1) {//bottom row
+             
+                sectionStruct = generateStartPts(1, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(2, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                sectionStruct = generateStartPts(6, index1, index2, startPt, blockHeight, blockWidth);
+                drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                if (index1 > 0) {
+                    sectionStruct = generateStartPts(3, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                    sectionStruct = generateStartPts(7, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                }
+               
+            }
+            else if (index1 === boardSections.length - 1) {//right column
+                
+                if (index2 > 0) {
+                    sectionStruct = generateStartPts(1, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                }
+                    
+                    sectionStruct = generateStartPts(3, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                    sectionStruct = generateStartPts(7, index1, index2, startPt, blockHeight, blockWidth);
+                    drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                   
+                if (index2 !== boardSections[index1].length - 1) {
+                        sectionStruct = generateStartPts(5, index1, index2, startPt, blockHeight, blockWidth);
+                        drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                        sectionStruct = generateStartPts(8, index1, index2, startPt, blockHeight, blockWidth);
+                        drawSubSectionSimple(sectionStruct.section, blockWidth, blockHeight, sectionStruct.startPt);
+                       
+                    }
+                
+            }
+
+           
+        }
+        const generateStartPts = (calcId, index1, index2, startPt,blockHeight,blockWidth) => {
+            let startX = startPt.x;
+            let startY = startPt.y;
+            let iter = 0;
+            let section = undefined;
+            let sectionId = undefined;
+            let newStartPt = undefined;
+           
+            switch (calcId) {
+                case 1: //top square
+                    while (iter < 12) {
+                        startY -= blockHeight;
+                        iter++;
+                    }
+                    sectionId = index1 + ',' + (index2 - 1);
+                    break;
+                case 2: //top right square
+                    while (iter < 12) {
+                        startY -= blockHeight;
+                        iter++;
+                    }
+                    iter = 0;
+                    while (iter < 12) {
+                        startX += blockHeight;
+                        iter++;
+                    }
+                    sectionId = (index1 + 1) + ',' + (index2 - 1);
+                    break;
+                case 3: //top left square
+                    while (iter < 12) {
+                        startY -= blockHeight;
+                        iter++;
+                    }
+                    iter = 0;
+                    while (iter < 12) {
+                        startX -= blockHeight;
+                        iter++;
+                    }
+                    sectionId = (index1 - 1) + ',' + (index2 - 1);
+                    break;
+                case 4://bottom right square
+                    while (iter < 12) {
+                        startY += blockHeight;
+                        iter++;
+                    }
+                    iter = 0;
+                    while (iter < 8) {
+                        startX += blockWidth;
+                        iter++;
+                    }
+                    sectionId = (index1 + 1) + ',' + (index2 + 1);
+                    break;
+                case 5://bottom left square
+                    while (iter < 12) {
+                        startY += blockHeight;
+                        iter++;
+                    }
+                    iter = 0;
+                    while (iter < 12) {
+                        startX -= blockHeight;
+                        iter++;
+                    }
+                    sectionId = (index1 - 1) + ',' + (index2 + 1);
+                    break;
+                case 6: //right section
+                    while (iter < 8) {
+                        startX += blockWidth;
+                        iter++
+                    }
+                    sectionId = (index1 + 1) + ',' + index2;
+                    //console.log('selected section...', sectionId);
+                    break;
+                case 7: //left section
+                    while (iter < 8) {
+                        startX -= blockWidth;
+                        iter++;
+                    }
+                    sectionId = (index1 - 1) + ',' + index2;
+                    break;
+                default: //bottom square
+                    while (iter < 12) {
+                        startY += blockHeight;
+                        iter++;
+                    }
+                    sectionId = index1 + ',' + (index2 + 1);
+                   
+            }
+            newStartPt = new Point2D(startX, startY);
+            let foundSection = groupOfWords.sections.find(x => x.sectionId === sectionId);
+            if (foundSection) {
+                section = foundSection;
+            }
+            else {
+                let Ids = sectionId.split(',');
+                section = new sectionStruct();
+                section.letter.push([]);
+                section.direction = [];
+                section.section = boardSections[parseInt(Ids[0])][parseInt(Ids[1])];
+            
+                section.sectionId = sectionId;
+            }
+            section.startPt = newStartPt;
+            if (!foundSection)
+                groupOfWords.sections.push(section);
+
+            return section;
+        }
+        const rectsInViewPort = () => {
+            const startPtTop = new Point2D(0, 0);
+            const endPtBottom = new Point2D(canvas.width, canvas.height);
+
+            let rectsVisible = [];
+            groupOfWords.sections.forEach(section => {
+                section.section.forEach(column => {
+                    column.forEach(rect => {
+                        if (rect.zoomX > startPtTop.x && rect.zoomX < endPtBottom.x && rect.zoomY > startPtTop.y && rect.zoomY < endPtBottom.y) {
+                            rectsVisible = [...rectsVisible, rect];
+                        }
+                    });
+                });
+            });
+
+            return rectsVisible;
+        }
+        const drawBigWordOutline = (isBigLetters, sections, offSetX, offSetY) => {
+            // let entry = groupOfWords.letter[groupOfWords.letter.length - 1];
+
+            let width = canvas.width;
+            let height = canvas.height;
+            let blockWidth = width / 8;
+            let blockHeight = height / 12;
+            let startPtTop = null;
+            let startPtBottom = null;
+            let endPtTop = null;
+            let endPtBottom = null;
+            let startPtCeiling = null;
+            let startPtFloor = null;
+            let endPtCeiling = null;
+            let endPtFloor = null;
+            ctx.beginPath();
+            let allSections = [];
+            groupOfWords.sections.forEach(section => {
+                //console.log(section);
+                section.letter.forEach(entry => { 
+                    //console.log(column);
+               // column.forEach(entry => {
+                   // console.log(entry);
+                    if (entry.length === 0) {
+                        return;
+                    }
+                    if (isBigLetters) {
+                        let foundRects = findIfSectionExists(entry[0].sectionIn, sections); //entry.find(x => x.sectionIn === currentSection);
+                        if (!foundRects && isBigLetters) {
+                            return;
+                        }
+                    }
+                    
+                    let direction = entry[0].direction;
+                    let startLetter = entry[0];
+                    let endLetter = entry[entry.length - 1];
+                   // let startLetterX = (isBigLetters) ? startLetter.zoomX + offSetX : startLetter.x;
+                    //let startLetterY = (isBigLetters) ? startLetter.zoomY + offSetY : startLetter.y;
+                    let startLetterX = (isBigLetters) ? startLetter.zoomX  : startLetter.x;
+                    let startLetterY = (isBigLetters) ? startLetter.zoomY : startLetter.y;
+                   // let endLetterX = (isBigLetters) ? endLetter.zoomX + offSetX : endLetter.x;
+                   // let endLetterY = (isBigLetters) ? endLetter.zoomY + offSetY : endLetter.y;
+                    let endLetterX = (isBigLetters) ? endLetter.zoomX : endLetter.x;
+                    let endLetterY = (isBigLetters) ? endLetter.zoomY : endLetter.y;
+                    blockWidth = (isBigLetters) ? blockWidth : startLetter.width;
+                    blockHeight = (isBigLetters) ? blockHeight : startLetter.height;
+
+                    if (direction === 1 || direction === 5 || direction === 6) { //horizontal right
+
+                        startPtTop = new Point2D(startLetterX + blockWidth, startLetterY - blockHeight);
+                        startPtBottom = new Point2D(startLetterX + blockWidth, startLetterY);
+                        endPtTop = new Point2D(endLetterX, endLetterY - blockHeight);
+                        endPtBottom = new Point2D(endLetterX, endLetterY);
+                        startPtCeiling = new Point2D(startLetterX, startLetterY - blockHeight);
+                        startPtFloor = new Point2D(startLetterX, startLetterY);
+                        endPtCeiling = new Point2D(endLetterX + blockWidth, endLetterY - blockHeight);
+                        endPtFloor = new Point2D(endLetterX + blockWidth, endLetterY);
+
+                    }
+                    else if (direction === 2 || direction === 7 || direction === 8) { //horizontal left
+
+                        startPtTop = new Point2D(startLetterX, startLetterY - blockHeight);
+                        startPtBottom = new Point2D(startLetterX, startLetterY);
+                        endPtTop = new Point2D(endLetterX + blockWidth, endLetterY - blockHeight);
+                        endPtBottom = new Point2D(endLetterX + blockWidth, endLetterY);
+                        startPtCeiling = new Point2D(startLetterX + blockWidth, startLetterY - blockHeight);
+                        startPtFloor = new Point2D(startLetterX + blockWidth, startLetterY);
+                        endPtCeiling = new Point2D(endLetterX, endLetterY - blockHeight);
+                        endPtFloor = new Point2D(endLetterX, endLetterY);
+
+
+                    }
+                    else { //vertical up
+
+                        startPtTop = new Point2D(startLetterX, startLetterY - blockHeight);
+                        startPtBottom = new Point2D(startLetterX + blockWidth, startLetterY - blockHeight);
+                        endPtTop = new Point2D(endLetterX, endLetterY - blockHeight);
+                        endPtBottom = new Point2D(endLetterX + blockWidth, endLetterY - blockHeight);
+                        //this part is different
+                        startPtCeiling = new Point2D(startLetterX, startLetterY);
+                        startPtFloor = new Point2D(startLetterX + blockWidth, startLetterY);
+                        endPtCeiling = new Point2D(endLetterX, endLetterY);
+                        endPtFloor = new Point2D(endLetterX + blockWidth, endLetterY);
+
+                    }
+                    //the drawing code should only be coded once
+                    let halfDist = 0;
+                    let half = 0;
+                    let halfDistEnd = 0;
+                    ctx.moveTo(startPtCeiling.x, startPtCeiling.y);
+                    //lets draw the ceiling
+                    if (direction === 6 || direction === 5) {
+                        let distX = startPtTop.x - startPtCeiling.x;
+                        halfDist = distX * .7;
+
+                        ctx.lineTo(startPtTop.x - halfDist, startPtTop.y);
+                    }
+                    else {
+                        ctx.lineTo(startPtTop.x, startPtTop.y);
+                    }
+
+                    if (direction === 4) {
+                       
+                        ctx.moveTo(startPtTop.x, startPtTop.y);
+                        ctx.lineTo(startPtBottom.x, startPtBottom.y);
+                    }
+                    //lets draw left wall
+                    if (direction !== 4) {
+                        ctx.moveTo(startPtCeiling.x, startPtCeiling.y);
+                        ctx.lineTo(startPtFloor.x, startPtFloor.y);
+                    }
+
+                    //lets draw bottom floor
+
+                    ctx.moveTo(startPtFloor.x, startPtFloor.y);
+                    if (direction === 6 || direction === 5) {
+                        let distBX = startPtBottom.x - startPtFloor.x;
+                        half = distBX * .7;
+                        ctx.lineTo(startPtBottom.x - half, startPtBottom.y);
+                    }
+                    else {
+                        ctx.lineTo(startPtBottom.x, startPtBottom.y);
+                    }
+
+
+                    //draw ceiling of end wall
+                    ctx.moveTo(endPtCeiling.x, endPtCeiling.y);
+                    if (direction === 7 || direction === 8) {
+                        let endX = endPtTop.x - endPtCeiling.x;
+                        halfDistEnd = endX * .5;
+
+                        ctx.lineTo(endPtTop.x - halfDistEnd, endPtTop.y);
+
+                    }
+                    else {
+                        ctx.lineTo(endPtTop.x, endPtTop.y);
+                    }
+                    if (direction === 3) {
+                        ctx.moveTo(endPtTop.x, endPtTop.y);
+                        ctx.lineTo(endPtBottom.x, endPtBottom.y);
+                    }
+                    //draw right wall
+                    if (direction !== 3) {
+                        ctx.moveTo(endPtCeiling.x, endPtCeiling.y);
+                        ctx.lineTo(endPtFloor.x, endPtFloor.y);
+
+                    }
+
+                    //draw bottom floor
+                    ctx.moveTo(endPtBottom.x, endPtBottom.y);
+                    if (direction === 7 || direction === 8) {
+
+                        ctx.moveTo(endPtFloor.x, endPtFloor.y)
+                        let endX = endPtFloor.x - endPtBottom.x;
+                        halfDistEnd = endX * .5;
+                        if (direction === 7)
+                            ctx.lineTo(endPtBottom.x + halfDistEnd, endPtBottom.y);
+                        else
+                            ctx.lineTo(endPtBottom.x + halfDistEnd, endPtBottom.y);
+                    }
+                    else {
+                        ctx.lineTo(endPtFloor.x, endPtFloor.y);
+                    }
+
+                    //draw lines across
+                    ctx.moveTo(startPtTop.x - halfDist, startPtTop.y);
+                    ctx.lineTo(endPtTop.x + halfDistEnd, endPtTop.y);
+                    ctx.moveTo(startPtBottom.x - half, startPtBottom.y);
+                    ctx.lineTo(endPtBottom.x + halfDistEnd, endPtBottom.y);
+
+
+
+                    });
+                //});
+                //console.log('Stroked lines....');
+                ctx.stroke();
+            });
+           
+        }
+        const compareDirectionRects = (rect1, rect2) => {
+            //Horizonal right direction
+            if (rect1.zoomY === rect2.zoomY && rect1.id < rect2.id) {
+                return 1;
+            }
+            else if (rect1.zoomY === rect2.zoomY && rect1.id > rect2.id) { //horizontal left direction
+                return 2;
+            }
+            else if (rect1.zoomX === rect2.zoomX && rect1.id > rect2.id) { //vertical up
+                return 3;
+            }
+            else if (rect1.zoomX === rect2.zoomX && rect1.id < rect2.id) {//vertical down
+                return 4;
+            }
+            else if (rect1.zoomX < rect2.zoomX && rect1.zoomY > rect2.zoomY) {//right diagonal up
+                return 5;
+            }
+            else if (rect1.zoomX < rect2.zoomX && rect1.zoomY < rect2.zoomY) {//right diagonal down
+                return 6;
+            }
+            else if (rect1.zoomX > rect2.zoomX && rect1.zoomY > rect2.zoomY) {//left diagonal up
+                return 7;
+            }
+            else if (rect1.zoomX > rect2.zoomX && rect1.zoomY < rect2.zoomY) {//left diagonal down
+                return 8;
+            }
+        }
+        const calcWordBoundary = (letter, index, wordLen) => {
+            if (letter.direction === 1) {
+                if (index === 0) {
+                    letter.box.bottom = 1;
+                    letter.box.left = 1;
+                    letter.box.right = 1;
+                }
+                else if (index === wordLen - 1) {
+                    letter.box.top = 1;
+                    letter.box.left = 1;
+                    letter.box.right = 1;
+                }
+                else {
+                    letter.box.right = 1;
+                    letter.box.left = 1;
+                }
+            }
+            else if (letter.direction === 2) {
+                if (index === 0) {
+                    letter.box.top = 1;
+                    letter.box.left = 1;
+                    letter.box.bottom = 1;
+                }
+                else if (index === wordLen - 1) {
+                    letter.box.top = 1;
+                    letter.box.right = 1;
+                    letter.box.bottom = 1;
+                }
+
+            }
+            else if (letter.direction === 3) {
+                if (index === 0) {
+                    letter.box.top = 1;
+                    letter.box.left = 1;
+                    letter.box.bottom = 1;
+                }
+                if (index === wordLen - 1) {
+                    letter.box.right = 1;
+                    letter.box.top = 1;
+                    letter.box.bottom = 1;
+                }
+                else {
+                    letter.box.top = 1;
+                    letter.box.bottom = 1;
+                }
+            }
+            else if (letter.direction === 4) {
+                if (index === 0) {
+                    letter.box.top = 1;
+                    letter.box.left = 1;
+                    letter.box.bottom = 1;
+                }
+                else if (index === wordLen - 1) {
+                    letter.box.top = 1;
+                    letter.box.right = 1;
+                    letter.box.bottom = 1;
+                }
+            }
+            else if (letter.direction === 5) {
+                if (index === 0) {
+                    letter.box.top = 1;
+                    letter.box.left = 1;
+                    letter.box.right = 1;
+                }
+                else if (index === wordLen - 1) {
+                    letter.box.left = 1;
+                    letter.box.right = 1;
+                    letter.box.bottom = 1;
+                }
+                else {
+                    letter.box.left = 1;
+                    letter.box.right = 1;
+                }
+            }
+            else if (letter.direction === 6) {
+                if (index === 0) {
+                    letter.box.top = 1;
+                    letter.box.right = 1;
+                    letter.box.bottom = 1;
+                }
+                else if (index === wordLen - 1) {
+                    letter.box.left = 1;
+                    letter.box.top = 1;
+                    letter.box.bottom = 1;
+                }
+
+            }
+            else if (letter.direction === 7) {
+                if (index === 0) {
+                    letter.box.right = 1;
+                    letter.box.bottom = 1;
+                    letter.box.top = 1;
+                }
+                else if (index === wordLen - 1) {
+                    letter.box.left = 1;
+                    letter.box.top = 1;
+                    letter.box.bottom = 1;
+                }
+                else {
+                    letter.box.top = 1;
+                    letter.box.bottom = 1;
+                }
+            }
+            else if (letter.direction === 8) {
+                if (index === 0) {
+                    letter.box.top = 1;
+                    letter.box.right = 1;
+                    letter.box.bottom = 1;
+                }
+                else if (index === wordLen - 1) {
+                    letter.box.top = 1;
+                    letter.box.left = 1;
+                    letter.box.bottom = 1;
+                }
+            }
+        }
+        const getMousePos = (evt) => {
+            var rect = canvas.getBoundingClientRect();
+
+            //return new vector2d(evt.clientX - rect.left,evt.clientY - rect.top,-1,-1);
+            return new Point2D(evt.clientX - rect.left, evt.clientY - rect.top);
+        }
+        const updateRectPositions = (deltaX, deltaY) => {
+            for (var key in scene) {
+                let localRect = scene[key].PuzzleBoard;
+                localRect.forEach(rect => {
+                    rect.x = rect.x + deltaX;
+                    rect.y = rect.y + deltaY;
+                });
+            }
+        }
+        const convertWords = (actualWords, plan) => {
+            let collectAll = []
+            let block = plan.Font + plan.Spacing;
+
+            //debugger;
+            Array.prototype.forEach.call(actualWords, (pArr) => {
+
+                let localArr = [];
+                // debugger;
+                Array.prototype.forEach.call(pArr, (p, i) => {
+                    //  debugger;
+                    let rect = BasicRect();
+                    let newRect = {
+                        ...rect,
+                        id: i,
+                        x: p.Position.x,
+                        y: p.Position.y,
+                        letter: p.Letter,
+                        width: block,
+                        height: block,
+                        boundTo: -1,
+                        direction: p.Direction,
+                        font: 'bold 14px Courier',
+                        box: {
+                            top: 0,
+                            right: 0,
+                            bottom: 0,
+                            left: 0
+                        },
+                        color: {
+                            red: p.Red,
+                            green: p.Green,
+                            blue: p.Blue
+                        }
+                    }
+
+                    // calcWordBoundary(newRect, i, pArr.length);
+                    localArr.push(newRect);
+                    //debugger;
+                });
+
+                collectAll.push(localArr);
+            });
+
+            return collectAll;
+        }
+        const convertToRects = (pixels, plan) => {
+            let localRect = [];
+            let smallestX = Number.MAX_SAFE_INTEGER;
+            let largestX = 0;
+            let smallestY = Number.MAX_SAFE_INTEGER;
+            let largestY = 0;
+            let block = plan.Font + plan.Spacing;
+
+            var reStart = /\^/g;
+            var reEnd = /\$/g;
+            var reNumbers = /[0-9]+/g;
+
+            pixels.forEach((p, i) => {
+                if (p.Position.x < smallestX) {
+                    smallestX = p.Position.x;
+                }
+                if (p.Position.x > largestX) {
+                    largestX = p.Position.x;
+                }
+                if (p.Position.y < smallestY) {
+                    smallestY = p.Position.y;
+                }
+                if (p.Position.y > largestY) {
+                    largestY = p.Position.y;
+                }
+                let rect = BasicRect();
+                let newRect = {
+                    ...rect,
+                    id: i,
+                    x: p.Position.x,
+                    y: p.Position.y,
+                    letter: p.Letter.replace(reStart, '').replace(reEnd, '').replace(reNumbers, ''),
+                    width: block,
+                    height: block,
+                    boundTo: -1,
+                    font: plan.Style,
+                    zoomX: 0,
+                    zoomY: 0,
+                    color: {
+                        red: p.Red,
+                        green: p.Green,
+                        blue: p.Blue
+                    }
+                }
+                localRect.push(newRect);
+
+            });
+
+            //calculate the midPt
+            let midPt = new Point2D((largestX - smallestX) / 2, (largestY - smallestY) / 2);
+            localRect.forEach(rect => {
+                rect.offCenterX = rect.x - midPt.x;
+                rect.offCenterY = rect.y - midPt.y;
+            })
+            return localRect;
+        }
+        const drawFullLetters = () => {
+            let board = scene[boundaryPts.scene];
+            let start = board[boundaryPts.topLeftIndex].x;
+            let end = board[boundaryPts.topRightIndex].x;
+            while (start <= end) {
+                let startY = board[boundaryPts.topLeftIndex].y;
+                let endY = board[boundaryPts.bottomLeftIndex].y;
+                let index = boundaryPts.topLeftIndex;
+                while (startY <= endY) {
+                    board[index].letter;
+                    index = boundaryPts.topLeftIndex + 1;
+                    ctx.fillText(bound[index].letter, rect.x, rect.y);
+                    ctx.stroke();
+                }
+            }
+        }
+        const partitionPuzzle = () => {
+            //8 indexes in width
+            //12 indexes in length
+
+            //find max y position
+            columnLimit = 12;
+
+            for (var key in scene) {
+                blockLimit = (scene[key].Modulus + 1) * 8;
+                let bottomOutLimit = scene[key].PuzzleBoard[scene[key].PuzzleBoard.length - 1];
+                //console.log(bottomOutLimit);
+                let board = scene[key].PuzzleBoard;
+                let onlyVertical = board.map(rect => rect.y);
+                //let onlyHorizontal = board.map(rect => rect.x);
+                //console.log(onlyVertical, onlyHorizontal);
+                //let maxHori = maxValue(onlyHorizontal);
+                let maxVert = maxValue(onlyVertical);
+                let block = scene[key].Plan.Font + scene[key].Plan.Spacing;
+                let howManyBlocks = maxVert / block;
+                let howManyAccross = board.length / blockLimit;
+                let howManyDown = howManyBlocks / columnLimit;
+                // console.log(Math.ceil(howManyAccross), Math.ceil(howManyDown), maxVert);
+                verticalLimit = Math.ceil(howManyDown);
+                horizontalLimit = Math.ceil(howManyAccross);
+                let startDown = 0;
+                let startAccross = 0;
+                let startIndex = 0;
+                // console.log(horizontalLimit, verticalLimit);
+
+                while (startAccross < horizontalLimit) {
+                    boardSections.push([]);
+                    let lastRow = boardSections[boardSections.length - 1];
+                    while (startDown < verticalLimit) {
+                        let subBoard = blockLetters(startIndex, board, scene[key].Modulus, 8, 12, bottomOutLimit, boardSections.length, lastRow.length);
+                        let lastC = subBoard[subBoard.length - 1];
+                        let mappingKey = subBoard[0][0].id + ',' + lastC[lastC.length - 1].id;
+                        // console.log(mappingKey, startDown + ',' + startAccross);
+                        mappings[mappingKey] = startAccross + ',' + startDown;
+
+                        lastRow.push(subBoard);//the subboard is not a row
+                        startDown++;
+                        // let lastBoard = boardSections[boardSections.length - 1];
+                        // let lastColumn = lastBoard[lastBoard.length - 1][0];
+                        startIndex += 12;
+                        //console.log(startIndex)
+
+                    }
+                    startAccross++;
+                    startDown = 0;
+                    let lastSection = boardSections[boardSections.length - 1];
+                    //debugger;
+                    let lastColumn = lastSection[0][lastSection[0].length - 1];
+                    //debugger;
+                    startIndex = lastColumn[0].id + (scene[key].Modulus + 1);
+
+
+                }
+                // console.log(boardSections);
+
+            }
+        }
+        const maxValue = (anyArr) => {
+            let max = 0;
+            anyArr.forEach(item => {
+                if (item > max) {
+                    max = item;
+                }
+            });
+            return max;
+        }
+        const blockLetters = (startIndex, board, modulus, columnLimit, heightLimit, bottomOutLimit, boardIndx, rowIndx) => {
+            let columnArr = [];
+            let subBoard = [];
+            let copyIndex = startIndex;
+            boardIndx -= 1;
+            for (let i = 0; i < columnLimit; i++) {
+                columnArr = [];
+                let blnFoundEnd = false;
+                for (let h = 0; h < heightLimit; h++) {
+                    if (board[copyIndex] && board[copyIndex].y < bottomOutLimit.y) {
+                        board[copyIndex].sectionIn = boardIndx + ',' + rowIndx;
+                        columnArr.push(board[copyIndex]);
+                        copyIndex++;
+                    }
+                    else {
+                        blnFoundEnd = true;
+                        break;
+                    }
+
+                }
+
+                //debugger;
+                copyIndex = columnArr[0].id + (modulus + 1);
+
+                subBoard.push(columnArr);
+                if (!board[copyIndex] || board[copyIndex].x > bottomOutLimit.x) {
+                    break;
+                }
+            }
+            return subBoard;
+        }
+        const drawBoundaryNew = (leftTopPoint, rightTopPoint, leftBottomPoint, rightBottomPoint) => {
+            ctx.beginPath();
+            ctx.moveTo(leftTopPoint.x, leftTopPoint.y);
+            ctx.lineTo(rightTopPoint.x, rightTopPoint.y);
+            ctx.moveTo(leftTopPoint.x, leftTopPoint.y);
+            ctx.lineTo(leftBottomPoint.x, leftBottomPoint.y);
+
+            ctx.moveTo(rightBottomPoint.x, rightBottomPoint.y);
+            ctx.lineTo(rightTopPoint.x, rightTopPoint.y);
+            ctx.moveTo(rightBottomPoint.x, rightBottomPoint.y);
+            ctx.lineTo(leftBottomPoint.x, leftBottomPoint.y);
+            ctx.stroke();
+        }
+        const drawBoundary = (leftCornerTop, rightCornerTop, leftCornerBottom, rightCornerBottom, sceneName) => {
+
+            let board = scene[sceneName].PuzzleBoard;
+            if (!(board[leftCornerTop] && board[rightCornerTop] && board[rightCornerBottom] && board[leftCornerBottom]))
+                return;
+
+            let subDistance = calcDistanceConv(board[leftCornerTop], board[rightCornerBottom]);
+            if (subDistance > 400)
+                return;
+
+            ctx.beginPath();
+
+            //console.log(subDistance);
+            //console.log(leftCornerTop, rightCornerTop, leftCornerBottom, rightCornerBottom, sceneName);
+            ctx.moveTo(board[leftCornerTop].x, board[leftCornerTop].y);
+            ctx.lineTo(board[rightCornerTop].x, board[rightCornerTop].y);
+            ctx.moveTo(board[leftCornerTop].x, board[leftCornerTop].y);
+            ctx.lineTo(board[leftCornerBottom].x, board[leftCornerBottom].y);
+            ctx.moveTo(board[rightCornerBottom].x, board[rightCornerBottom].y);
+            ctx.lineTo(board[rightCornerTop].x, board[rightCornerTop].y);
+            ctx.moveTo(board[rightCornerBottom].x, board[rightCornerBottom].y);
+            ctx.lineTo(board[leftCornerBottom].x, board[leftCornerBottom].y);
+            ctx.stroke();
+        }
+        const generateRandomLetter = () => {
+            let alphabet = [
+                'A',
+                'B',
+                'C',
+                'D',
+                'E',
+                'F',
+                'G',
+                'H',
+                'I',
+                'J',
+                'K',
+                'L',
+                'M',
+                'N',
+                'O',
+                'P',
+                'Q',
+                'R',
+                'S',
+                'T',
+                'W',
+                'X',
+                'Y',
+                'Z'
+            ];
+            let letterPos = Math.floor((Math.random() * alphabet.length - 1));
+            if (letterPos < 0) {
+                letterPos = alphabet.length - 1;
+            }
+            // console.log(letterPos);
+            return alphabet[letterPos];
+        }
+        const drawSubSectionSimple = (section, blockWidth, blockHeight, startPt) => {
+            ctx.save();
+            ctx.beginPath();
+            ctx.font = 'bold 3em Arial';
+            let startX = startPt.x;
+            let startY = startPt.y;
+             section.forEach(columns => {
+               columns.forEach(rect => {
+                    let strRgb = `rgba(${rect.color.red},${rect.color.green},${rect.color.blue},1.0)`;
+                    ctx.fillStyle = strRgb;
+                    rect.zoomX = startX;
+                    rect.zoomY = startY + blockHeight;
+                    ctx.fillText(rect.letter, rect.zoomX, rect.zoomY );
+                     // console.log(startX, startY + blockHeight);
+                    startY += blockHeight;
+                });
+                 startX += blockWidth;
+               //  console.log(startX);
+                startY = startPt.y;
+            });
+            ctx.stroke();
+           
+        }
+        const drawSubSection = (section, blockWidth, blockHeight, startDeltaX, startDeltaY, isSetUp) => {
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.font = 'bold 3em Arial';
+            let startX = 0, startY = 0,saveY=0;
+           /* if (!isSetUp) {
+                
+                startX = section[0][0].zoomX;
+                startY = section[0][0].zoomY;
+                startX = startX + startDeltaX;
+                startY = startY + startDeltaY;
+                saveY = startY;
+                console.log(section[0][0]);
+            }*/
+
+           // console.log(startDeltaX, startDeltaY);
+            // console.log('the dimensions', blockWidth, blockHeight);
+           // section.forEach(colums => {
+                // console.log('----------Start new Column----------');
+                section[0].forEach(rect => {
+                    let strRgb = `rgba(${rect.color.red},${rect.color.green},${rect.color.blue},1.0)`;
+                    ctx.fillStyle = strRgb;
+                    rect.zoomX = (!isSetUp) ? (rect.zoomX + startDeltaX) : startX;
+                    rect.zoomY = (!isSetUp) ? (rect.zoomY + startDeltaY + blockHeight) : startY + blockHeight;
+                    // console.log(rect);
+                    ctx.fillText(rect.letter, rect.zoomX, rect.zoomY);
+                  //  console.log(startX, startY + blockHeight);
+                    startY += blockHeight;
+
+                });
+                if (isSetUp) {
+                    startX += blockWidth;
+                    startY = saveY;
+                }
+              
+          //  });
+            ctx.stroke();
+            let minPtX = 0, minPtY = 0, maxPtX = 0, maxPtY = 0;
+            section.forEach(columns => {
+                let zoomXArr = columns.map(x => x.zoomX);
+                let zoomYArr = columns.map(x => x.zoomY);
+                let minX = Math.min.apply(null, zoomXArr);
+                let maxX = Math.max.apply(null, zoomXArr);
+                let minY = Math.min.apply(null, zoomYArr);
+                let maxY = Math.max.apply(null, zoomYArr);
+                if (minX <= minPtX) {
+                    minPtX = minX;
+                }
+                if (minY <= minPtY) {
+                    minPtY = minY;
+                }
+                if (maxX >= maxPtX) {
+                    maxPtX = maxX;
+                }
+                if (maxY >= maxPtY) {
+                    maxPtY = maxY;
+                }
+            });
+            // console.log(section);
+            return {
+                topLeftCorner: new Point2D(minPtX, minPtY),
+                topRightCorner: new Point2D(maxPtX, minPtY),
+                bottomLeftCorner: new Point2D(minPtX, maxPtY),
+                bottomRightCorner: new Point2D(maxPtX, maxPtY)
+            }
+        }
+        const drawRectsScene = () => {
+
+            ctx.beginPath();
+            ctx.save();
+            for (var key in scene) {
+                let localRect = scene[key].PuzzleBoard;
+                localRect.forEach((rect, i) => {
+                    let strRgb = `rgba(${rect.color.red},${rect.color.green},${rect.color.blue},1.0)`;
+
+                    ctx.font = scene[key].Plan.Style;
+                    if (rect.outline) {
+                        // console.log(rect.letter, i);
+                        let block = scene[key].Plan.Font + scene[key].Plan.Spacing;
+                        ctx.rect(rect.x, rect.y - block, rect.width, rect.height);
+                    }
+                    ctx.fillStyle = strRgb;
+
+                    ctx.fillText(rect.letter, rect.x, rect.y);
+                    ctx.stroke();
+
+                });
+            }
+            ctx.restore();
+        }
+        const calcDistance = (pixel1, pixel2) => {
+            var xs = pixel2.Position.x - pixel1.Position.x;
+            xs = xs * xs;
+            //debugger
+            var xy = pixel2.Position.y - pixel1.Position.y;
+            xy = xy * xy;
+
+            return Math.sqrt(xs + xy);
+        }
+        const calcDistanceConv = (pixel1, pixel2) => {
+            var xs = pixel2.x - pixel1.x;
+            xs = xs * xs;
+            //debugger
+            var xy = pixel2.y - pixel1.y;
+            xy = xy * xy;
+
+            return Math.sqrt(xs + xy);
+        }
+        const partitionScreen = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let width = canvas.width;
+            let height = canvas.height;
+            let blockWidth = width / 6; //5;
+            let startX = 0;
+            let startY = 0;
+            ctx.save();
+            ctx.beginPath();
+            ctx.font = 'bold 6em Arial';
+            let blockHeight = height / 6; //4;
+            for (let h = 0; h < blockHeight; h++) {
+                for (let i = 0; i < blockWidth; i++) {
+                    var letter = generateRandomLetter();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(startX + blockWidth, startY);
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(startX, startY + blockHeight);
+                    ctx.moveTo(startX + blockWidth, startY + blockHeight);
+                    ctx.lineTo(startX + blockWidth, startY);
+                    ctx.moveTo(startX + blockWidth, startY + blockHeight);
+                    ctx.lineTo(startX, startY + blockHeight);
+                    if (letter === 'Z' || letter === 'Y' || letter === 'L' || letter === 'P') {
+                        ctx.fillText(letter, startX + 6, startY + blockHeight);
+                    }
+                    else if (letter === 'I') {
+                        ctx.fillText(letter, startX + (blockWidth / 2) - 14, startY + blockHeight);
+                    }
+                    else {
+                        ctx.fillText(letter, startX, startY + blockHeight);
+                    }
+
+                    startX += blockWidth;
+                }
+                startY += blockHeight;
+                startX = 0;
+            }
+            ctx.stroke();
+            //console.log('partition...', blockWidth, blockHeight);
+        }
+        const loadExample = () => {
+            var url = 'http://localhost:5233/Data/GetSingleScene/?scene=' + 'test-save';
+            $.ajax({
+                type: "GET",
+                traditional: true,
+                url: url,
+                cache: false,
+                contentType: 'application/json',
+                success: function (resp) {
+                    scene = {};
+                    // console.log(resp);
+                    Array.prototype.forEach.call(resp, (p) => {
+
+                        let mainArr = [];
+                        let localArr = [];
+                        for (let i = 0; i < p.Words.length; i++) {
+
+                            if (p.Words[i].Letter !== '$') {
+                                localArr.push(p.Words[i])
+                            }
+                            else {
+
+                                mainArr.push(localArr);
+                                localArr = [];
+                            }
+                        }
+                        //debugger;
+                        let plan = p.Plan;
+                        let subDistance = calcDistance(p.Pixels[1], p.Pixels[p.Pixels.length - 1]);
+                        if (subDistance > fullDistance) {
+                            fullDistance = subDistance;
+                        }
+                        scene[p.SectionName] = {
+                            PuzzleBoard: convertToRects(p.Pixels, plan),
+                            WordBoard: convertWords(mainArr, plan),
+                            Plan: p.Plan,
+                            Distance: subDistance,
+                            Modulus: p.Modulus
+                        };
+                    });
+                    drawRectsScene();
+                    partitionPuzzle();
+
+                }
+            });
+        }
+        $('#pencilHighLight').click(() => {
+            highlightReady = !highlightReady;
+            console.log('Click pencil', highlightReady);
+            if (highlightReady) {
+                $('#pencilHighLight').prop('src', '/Content/images/big-pencil-small.png');
+            }
+            else {
+                $('#pencilHighLight').prop('src', '/Content/images/big-pencil-small-x.png');
+            }
+        });
+        $('#btnImport').click(() => {
+
+
+            loadExample();
+
+        });
+        $('#btnRefreshSection').click(() => {
+            let row1 = boardSections[0]; //array1
+            let section1 = row1[0];//array2
+            drawSubSection(section1);
+            /*section1.forEach(colums => {//array3
+                colums.forEach(rect => {
+                    console.log(rect);
+                });
+            });*/
+            //partitionScreen();
+        });
+
+        loadExample();
+
+    </script>
+</body>
+</html>

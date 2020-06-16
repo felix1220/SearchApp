@@ -1,0 +1,356 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>AntPuzzle</title>
+    <style>
+
+        .controlPanel {
+            background: white;
+            padding-left: 0;
+            padding-right: 0;
+            -webkit-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            -moz-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+        }
+
+        hr.style-three {
+            border: 0;
+            border-bottom: 1px dashed #ccc;
+            background: #999;
+        }
+
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            padding-top: 100px; /* Location of the box */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+        /* Modal Content */
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+        /* The Close Button */
+        .close {
+            color: #aaaaaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+            .close:hover,
+            .close:focus {
+                color: #000;
+                text-decoration: none;
+                cursor: pointer;
+            }
+    </style>
+</head>
+<body>
+    <div style="float:left">
+        <canvas id="canvas" width="480" height="450" class="controlPanel"></canvas><br />
+    </div>
+    <div style="width:30%;float:right">
+        <div>
+            <span>
+                <b>Select Scene:</b>
+                <select id="ddlSelectScene">
+                    <option value="">--Select Scene--</option>
+                </select>
+            </span>&nbsp;
+            <span>
+
+            </span>
+        </div><br />
+    </div>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.core.min.js"></script>
+    <script>
+        var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext("2d");
+        let allPuzzleNames = [];
+        let rects = [];
+        let bannedColors = [];
+        let mod = 0;
+        function generateRandomLetter() {
+            let alphabet = [
+                'A',
+                'B',
+                'C',
+                'D',
+                'E',
+                'F',
+                'G',
+                'H',
+                'I',
+                'J',
+                'K',
+                'L',
+                'M',
+                'N',
+                'O',
+                'P',
+                'Q',
+                'R',
+                'S',
+                'T',
+                'W',
+                'X',
+                'Y',
+                'Z'
+            ];
+            let letterPos = Math.floor((Math.random() * alphabet.length - 1));
+            return alphabet[letterPos];
+        }
+        $('#ddlSelectScene').on('change', () => {
+            if ($('#ddlSelectScene').val() === '') {
+                return;
+            }
+            ImportPuzzle();
+        });
+        var Point2D = function (x, y) {
+            return {
+                x: x,
+                y: y
+            };
+        };
+        function BasicRect() {
+            return {
+                x: 10,
+                y: 10,
+                deltaX: 0,
+                deltaY: 0,
+                width: 12,
+                height: 12,
+                outline: false,
+                boundTo: -1,
+                letter: 'A',
+                offCenterX: 0,
+                offCenterY: 0,
+                direction: -1,
+                font: 'bold 14px Courier',
+                box: {
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0
+                },
+                color: {
+                    red: 0,
+                    green: 0,
+                    blue: 0
+                },
+                rollBackRect: null
+            };
+        }
+        function convertToRects(pixels, plan) {
+            let localRect = [];
+            let smallestX = Number.MAX_SAFE_INTEGER;
+            let largestX = 0;
+            let smallestY = Number.MAX_SAFE_INTEGER;
+            let largestY = 0;
+            let block = 14;//plan.Font + plan.Spacing;
+
+            var reStart = /\^/g;
+            var reEnd = /\$/g;
+            var reNumbers = /[0-9]+/g;
+
+            pixels.forEach((p,i) => {
+                if (p.Position.x < smallestX) {
+                    smallestX = p.Position.x;
+                }
+                if (p.Position.x > largestX) {
+                    largestX = p.Position.x;
+                }
+                if (p.Position.y < smallestY) {
+                    smallestY = p.Position.y;
+                }
+                if (p.Position.y > largestY) {
+                    largestY = p.Position.y;
+                }
+                let rect = BasicRect();
+                let newRect = {
+                    ...rect,
+                    id:i,
+                    x: p.Position.x,
+                    y: p.Position.y,
+                    letter: p.Letter.replace(reStart, '').replace(reEnd, '').replace(reNumbers, ''),
+                    width: block,
+                    height: block,
+                    boundTo: -1,
+                    font: 'bold 14px Courier',
+                    color: {
+                        red: p.Red,
+                        green: p.Green,
+                        blue: p.Blue
+                    }
+                }
+                localRect.push(newRect);
+
+            });
+           
+            //calculate the midPt
+            let midPt = new Point2D((largestX - smallestX) / 2, (largestY - smallestY) / 2);
+            localRect.forEach(rect => {
+                rect.offCenterX = rect.x - midPt.x;
+                rect.offCenterY = rect.y - midPt.y;
+            })
+            return localRect;
+        }
+        function ImportPuzzle() {
+            let realPuzzleName = $('#ddlSelectScene').val();
+            let url = 'http://localhost:5233/Data/GetSinglePuzzle/?puzzleName=' + realPuzzleName;
+            $.ajax({
+                type: "GET",
+                traditional: true,
+                url: url,
+                cache: false,
+                contentType: 'application/json',
+                success: function (resp) {
+                    //filter out
+                    ImportBannedColors(resp);
+                }
+            });
+            
+        }
+        function ImportBannedColors(respRects) {
+            let url = 'http://localhost:5233/Data/GetBlockedColors';
+
+                $.ajax({
+                    type: "GET",
+                    traditional: true,
+                    url: url,
+                    cache: false,
+                    contentType: 'application/json',
+                    success: function (resp) {
+                        resp.forEach(colorStr => {
+                            let colorsArr = colorStr.split(',');
+                            let rect = BasicRect();
+                            let colorRect = {
+                                ...rect,
+                                color: {
+                                    red: parseInt(colorsArr[0]),
+                                    green: parseInt(colorsArr[1]),
+                                    blue:parseInt(colorsArr[2])
+                                }
+                            }
+                            bannedColors.push(colorRect);
+                        });
+                       
+                        let filteredRects = respRects.AllLetters.filter(x => { return !(bannedColors.find(c => { return x.Red === c.color.red && x.Green === c.color.green && x.Blue === c.color.blue })) });
+                        rects = convertToRects(filteredRects);
+                        mod = resp.Modulus;
+                        drawRectsScene();
+                       
+
+                    }
+                });
+        }
+        function drawRectsScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            
+           
+            // for (var key in scene) {
+
+            let localRect = rects; //scene[key].PuzzleBoard;
+            let block = 0;
+            localRect.forEach((rect, i) => {
+                ctx.beginPath();
+                let strRgb = `rgba(${rect.color.red},${rect.color.green},${rect.color.blue},1.0)`;
+               //  ctx.font = rect.font;
+                ctx.font = 'bold 14px Courier';//scene[key].Plan.Style;
+                //if (rect.outline) {
+                    // console.log(rect.letter, i);
+                // let block = scene[key].Plan.Font + scene[key].Plan.Spacing;
+                block = (i + 1 >= rects.length) ? block : Math.abs(rect.y - localRect[i + 1].y);
+                if (i + 1 >= rects.length)
+                     return;
+
+                    //ctx.rect(rect.x, rect.y - block, rect.width, rect.height);
+                    ctx.moveTo(rect.x, rect.y - block);
+                    ctx.lineTo(rect.x + block, rect.y - block); //top line
+                    ctx.moveTo(rect.x, rect.y - block);
+                   ctx.lineTo(rect.x, rect.y); //left line
+                    //let sidePos = i + mod + 1;
+                let sidePos = rects.findIndex(r => { return r.id > rect.id && r.y === rect.y });
+               // debugger;
+               // if (!(rects[sidePos].color.red === rect.color.red && rects[sidePos].color.green === rect.color.green
+              //      && rects[sidePos].blue === rect.color.blue)) {
+                    ctx.moveTo(rect.x + block, rect.y);
+                    ctx.lineTo(rect.x + block, rect.y - block); //right line
+              //  }
+                    let bottomPos = i + 1;
+              //  if (!(rects[bottomPos].color.red === rect.color.red && rects[bottomPos].color.green === rect.color.green
+                //    && rects[bottomPos].blue === rect.color.blue)) {
+                    ctx.moveTo(rect.x + block, rect.y);
+                    ctx.lineTo(rect.x, rect.y); //bottom line
+               // }
+                    
+                
+                //}
+                ctx.strokeStyle = strRgb;
+                ctx.fillStyle = strRgb;
+                // ctx.rect(rect.x, rect.y, rect.width, rect.height);
+               //  ctx.fillText(rect.letter, rect.x, rect.y + rect.height);
+               // ctx.fillText(rect.letter, rect.x, rect.y);
+                ctx.stroke();
+
+            });
+            //}
+            
+            ctx.restore();
+        }
+        function sceneAddControl() {
+            let $puzzleDropDown = $('#ddlSelectScene');
+
+            allPuzzleNames.forEach(name => {
+                $('<option />', { value: name, text: name }).appendTo($puzzleDropDown);
+            });
+            $puzzleDropDown.on('change', function () {
+
+                //alert(this.value);
+            });
+        }
+        function getPuzzleNames() {
+            // var url = 'http://localhost:55097/Data/GetPuzzleNames';
+            var url = 'http://localhost:5233/Data/GetPuzzleNames';
+
+            $.ajax({
+                type: "GET",
+                traditional: true,
+                url: url,
+                cache: false,
+                contentType: 'application/json',
+                success: function (resp) {
+                    resp.forEach(f => {
+                        allPuzzleNames.push(f);
+                        // $('#ddlCurrentPuzzles').append($('<option></option>').val(f).html(f));
+                    });
+                    sceneAddControl();
+                    //console.log(resp);
+                    // colorTheCanvas(resp);
+                    // loadMetaRects(resp);
+                }
+            });
+        }
+        getPuzzleNames();
+    </script>
+</body>
+</html>

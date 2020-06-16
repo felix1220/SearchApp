@@ -1,0 +1,1785 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>ReadPixels</title>
+    <style>
+
+        .controlPanel {
+            background: white;
+            padding-left: 0;
+            padding-right: 0;
+            -webkit-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            -moz-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+        }
+
+        hr.style-three {
+            border: 0;
+            border-bottom: 1px dashed #ccc;
+            background: #999;
+        }
+
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            padding-top: 100px; /* Location of the box */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+        /* Modal Content */
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+        /* The Close Button */
+        .close {
+            color: #aaaaaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+            .close:hover,
+            .close:focus {
+                color: #000;
+                text-decoration: none;
+                cursor: pointer;
+            }
+    </style>
+</head>
+<body>
+     <div id="highlightCanvas" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&nbsp;</span>
+            <br />
+            <div style="float:left">
+                <canvas id="highlightWords" width="400" height="400" class="controlPanel"></canvas>
+            </div>
+            <div style="float:right">
+                <div>
+                    <textarea rows="10" cols="10" id="txtNewWords"></textarea>
+                    <button id="btnFillWords">Submit</button>
+                </div>
+                <div>
+                    <span id="wordsPanel-Deleted">
+
+                    </span>
+                </div>
+            </div>
+        </div>
+     </div>
+            <div id="batchModal" class="modal">
+
+                <div class="modal-content">
+                    <span class="close" onclick="closeModal()">&nbsp;</span>
+                    <br />
+                    <table width="60%">
+                        <tr>
+                            <td>Left:</td>
+                            <td>Right:</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <input type="text" id="topLeftCorner" size="3" />
+                            </td>
+                            <td>
+                                <input type="text" id="topRightCorner" size="3" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <input type="text" id="bottomLeftCorner" size="3" />
+                            </td>
+                            <td>
+                                <input type="text" id="bottomRightCorner" size="3" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                Words:
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <textarea rows="30" cols="50" id="txtWords"></textarea>
+                            </td>
+                            <td>
+                                <button id="btnStickBatchWords">Stick Words</button>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+            </div>
+            <div style="width:50%;float:left">
+                <canvas id="canvas" width="500" height="500" class="controlPanel"></canvas><br />
+
+
+            </div>
+            <div style="width:30%;float:right">
+                <hr />
+                <div>
+                    <div>
+                        <span>
+                            <b>Select Scene:</b>
+                            <select id="ddlSelectScene">
+                                <option value="">--Select Scene--</option>
+                            </select>
+                        </span>&nbsp;
+                    </div><br />
+                    <div>
+                        <span><b>Name:</b><input type="text" id="txtPuzzleName" /></span>&nbsp;
+                        <span><button id="btnSavePuzzle">Save Puzzle</button></span>
+                    </div>
+                </div><br />
+                <hr />
+                <div>
+                    Import How Many? <input type="text" id="txtImportPuzzles" size="3" /> <button id="btnShow">Show!</button>&nbsp;<button id="btnImport">Import!</button>
+                    &nbsp;<button id="btnClear">Clear!</button>
+                </div>
+                &nbsp;
+                <div id="puzzleLoader">
+                    <!--
+            <span><b>Load Puzzle:</b></span>&nbsp;
+            <span>
+            <select id="ddlCurrentPuzzles">
+                <option value="">--Select Puzzle--</option>
+            </select>
+             </span>
+             -->
+                </div>
+                <hr />
+                &nbsp;
+                <div>
+                    <span>
+                        <button id="btnAddWord">Add Word</button>
+                    </span>
+                    <span>
+                        <button id="btnStickToPuzzle">Show on Puzzle</button>
+                    </span>
+                    <span>
+                        <button id="btnClearWords">Clear Words</button>
+                    </span>
+                    <!--
+                    <span>
+                        <button id="btnShowBatchModal">Show Batch Modal</button>
+                    </span>
+                        -->
+                    <div id="wordsPanel" style="margin-top:10px;">
+
+                    </div>
+                    <span style="margin-top:10px;">
+                        <b>Selected Words:</b><select id="ddlSelectWord">
+                            <option value="">--Select Word--</option>
+                        </select>
+                    </span>
+                </div>
+                <hr />
+                &nbsp;
+                <div>
+                    <span>
+                        <b>Selected Puzzle:</b><select id="ddlSelectPuzzle">
+                            <option value="">--Select Puzzle--</option>
+                        </select>
+                    </span>
+                </div>
+                &nbsp;
+
+                <div>
+                    <button id="btnCreateRect">Create Rect</button> &nbsp; <button id="btnUpdateRect">Update Rect</button>
+                    &nbsp;<button id="btnRollBackRect">RollBack Rect</button>
+                </div>
+                &nbsp;
+                <div>
+                    <b>How many Rects?:</b><input type="text" id="txtHowMany" size="3" />&nbsp;<button id="btnPickRect">Pick Rect</button>
+                </div>
+                &nbsp;
+                <!--
+                <div>
+                    <div>
+                        <b>Top Left:</b> <input type="text" id="topLeftCornerIndex" size="3" />
+                    </div>
+                    <div>
+                        <b> Top Right: </b> <input type="text" id="topRightCornerIndex" size="3" />
+                    </div>
+                    <div style="float:left;width:70%">
+                        <span>
+                            <b> Bottom Left: </b> <input type="text" id="bottomLeftCornerIndex" size="3" />
+                        </span>
+                        <span>
+                            <button id="btnShowPanelWords">Submit</button>
+                        </span>
+                    </div>
+                </div>
+                    -->
+                &nbsp;
+                <div>
+                    <b>All Rects:</b> <select id="allRects">
+                        <option value="-1">--Select Rect--</option>
+                    </select>
+                </div>
+                &nbsp;
+                <div>
+                    <b>Select Font:</b><select id="ddlFontTypes">
+                        <option value="bold 10px Courier">bold 10px Courier</option>
+                        <option value="bold 12px Courier">bold 12px Courier</option>
+                        <option value="bold 14px Courier">bold 14px Courier</option>
+                        <option value="bold 16px Courier">bold 16px Courier</option>
+                        <option value="bold 18px Courier">bold 18px Courier</option>
+                        <option value="bold 20px Courier">bold 20px Courier</option>
+                    </select>
+                </div>
+                &nbsp;
+                <div>
+                    <span>
+                        <b>X:</b><input type="text" id="txtPosX" size="3" />
+                    </span>
+                    &nbsp;
+                    <span>
+                        <b>Y:</b><input type="text" id="txtPosY" size="3" />
+                    </span>
+                </div>
+                &nbsp;
+                <div>
+                    <span>
+                        <b>Width:</b><input type="text" id="txtWidth" size="3" />
+                    </span>&nbsp;
+                    <span>
+                        <b>Height:</b><input type="text" id="txtHeight" size="3" />
+                    </span>
+                </div>
+                &nbsp;
+                <div>
+                    <span>
+                        <b>Red:</b><input type="text" id="txtRed" size="3" />
+                    </span>
+                    &nbsp;
+                    <span>
+                        <b>Green:</b><input type="text" id="txtGreen" size="3" />
+                    </span>
+                    &nbsp;
+                    <span>
+                        <b>Blue</b><input type="text" id="txtBlue" size="3" />
+                    </span>
+                </div>
+                &nbsp;
+                <div>
+                    <span>
+                        <b>Letter:</b><input type="text" id="txtLetter" size="3" />
+                    </span>
+                    &nbsp;
+                    <span>
+                        <input type="checkbox" name="chkRectOutline" value="chkOutline" id="chkRectOutline" /> Outline Rect
+                    </span>
+                    &nbsp;
+                    <span>
+                        <input type="checkbox" name="chkRectBoundTo" value="rectBoundTo" id="chkRectBoundTo" /> Outline Rect Depend
+                    </span>
+                </div>
+                &nbsp;
+                <div>
+                    <span>
+                        <b>Bound To:</b><select id="ddlBoundTo">
+                            <option value="-1">--Select Rect--</option>
+                        </select>
+                    </span>
+                    &nbsp;
+                    <input type="checkbox" name="chkMoveCanvas" value="canvasMove" id="chkMoveCanvas" /> Move Canvas
+                    &nbsp;
+                    <input type="checkbox" name="chkMoveShape" value="canvasShape" id="chkMoveShape" /> Move Shape
+                    &nbsp;
+                    <input type="checkbox" name="chkMoveLetter" value="canvasShape" id="chkMoveLetter" /> Move Letter
+                </div>
+                <div>
+                    <span>
+                        <input type="checkbox" name="chkCascadeX" value="cascadeX" id="chkCascadeX" /> Cascade X
+                    </span>
+                    &nbsp;
+                    <span>
+                        <input type="checkbox" name="chkCascadeY" value="cascadeX" id="chkCascadeY" /> Cascade Y
+                    </span>
+                    &nbsp;
+                    <span>
+                        <input type="checkbox" name="chkCascadeColor" value="cascadeColor" id="chkCascadeColor" /> Cascade Color
+                    </span>
+                </div>
+
+            </div>
+            <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.core.min.js"></script>
+            <script>
+                var canvas = document.getElementById('canvas');
+                var canvasWords = document.getElementById('highlightWords');
+                var ctx = canvas.getContext("2d");
+                var ctxWords = canvasWords.getContext("2d");
+                var mouseIsDown = false;
+                let allRects = [];
+                let defaultName = 'NA';
+                let scene = {};
+                let globalWords = [];
+                let allPuzzleNames = [];
+                // scene[defaultName] = [];
+
+                function generateRandomLetter() {
+                    let alphabet = [
+                        'A',
+                        'B',
+                        'C',
+                        'D',
+                        'E',
+                        'F',
+                        'G',
+                        'H',
+                        'I',
+                        'J',
+                        'K',
+                        'L',
+                        'M',
+                        'N',
+                        'O',
+                        'P',
+                        'Q',
+                        'R',
+                        'S',
+                        'T',
+                        'W',
+                        'X',
+                        'Y',
+                        'Z'
+                    ];
+                    let letterPos = Math.floor((Math.random() * alphabet.length - 1));
+                    return alphabet[letterPos];
+                }
+                var Point2D = function (x, y) {
+                    return {
+                        x: x,
+                        y: y
+                    };
+                };
+                function BasicRect() {
+                    return {
+                        x: 10,
+                        y: 10,
+                        deltaX: 0,
+                        deltaY: 0,
+                        width: 12,
+                        height: 12,
+                        outline: false,
+                        boundTo: -1,
+                        letter: 'A',
+                        offCenterX: 0,
+                        offCenterY: 0,
+                        direction: -1,
+                        index: -1,
+                        font: 'bold 14px Courier',
+                        box: {
+                            top: 0,
+                            right: 0,
+                            bottom: 0,
+                            left: 0
+                        },
+                        color: {
+                            red: 0,
+                            green: 0,
+                            blue: 0
+                        },
+                        rollBackRect: null
+                    };
+                }
+                var initialDown = new Point2D(0, 0);
+                function updateRectPositions(deltaX, deltaY) {
+                    for (var key in scene) {
+                        let localRect = scene[key].PuzzleBoard;
+                        localRect.forEach(rect => {
+                            rect.x = rect.x + deltaX;
+                            rect.y = rect.y + deltaY;
+                        });
+                    }
+                }
+                function updateRectByClick(posX, posY) {
+                    let rects = scene[defaultName].PuzzleBoard;
+                    rects.forEach(r => {
+                        r.x = r.offCenterX + posX;
+                        r.y = r.offCenterY + posY;
+                    });
+                }
+                function loadSubPuzzle() {
+                    const topLeftIndex = parseInt($('#topLeftCornerIndex').val());
+                    const topRightIndex = parseInt($('#topRightCornerIndex').val());
+                    const bottomLeftIndex = parseInt($('#bottomLeftCornerIndex').val());
+                    rectsToShow = [];
+                    for (var key in scene) {
+                        const topPt = new Point2D(scene[key].PuzzleBoard[topRightIndex].x, scene[key].PuzzleBoard[topRightIndex].y);
+                        const bottomPt = new Point2D(scene[key].PuzzleBoard[bottomLeftIndex].x, scene[key].PuzzleBoard[bottomLeftIndex].y);
+                       /* let bottomRightIndex = -1;
+                        scene[key].PuzzleBoard.forEach((rect, i) => {
+                            if (rect.x === topPt.x && rect.y === bottomPt.y) {
+                                bottomRightIndex = i;
+                                return;
+                            }
+                        });*/
+                        const topLeftPt = new Point2D(scene[key].PuzzleBoard[topLeftIndex].x, scene[key].PuzzleBoard[topLeftIndex].y);
+                        const filteredRects = scene[key].PuzzleBoard.filter(rect => rect.x >= topLeftPt.x && rect.x <= topPt.x &&
+                            rect.y >= topLeftPt.y && rect.y <= bottomPt.y);
+                        filteredRects.forEach((rect, i) => {
+                            rect.index = i;
+                        });
+                        
+                    }
+                   
+                }
+                function drawWordsHighlight(rects) {
+
+                }
+                function drawSubScene(rects) {
+                    let width = canvasWords.width;
+                    let height = canvasWords.height;
+                    let blockWidth = width / 8;
+                    let blockHeight = height / 12;
+                    ctxWords.save();
+                    ctxWords.beginPath();
+                    ctxWords.font = 'bold 3em Arial';
+                    let startX = 0;
+                    let startY = 0;
+                    rects.forEach(rect => {
+                        let strRgb = `rgba(${rect.color.red},${rect.color.green},${rect.color.blue},1.0)`;
+                        ctxWords.fillStyle = strRgb;
+                        ctxWords.fillText(rect.letter, rect.zoomX, rect.zoomY);
+                        startX += blockWidth;
+                        if (startX === width) {
+                            startX = 0;
+                            startY += blockHeight;
+                        }
+                    });
+                    ctxWords.stroke();
+                }
+                function drawRectsScene() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.beginPath();
+                    ctx.save();
+                    for (var key in scene) {
+                        let localRect = scene[key].PuzzleBoard;
+                        localRect.forEach((rect, i) => {
+                            let strRgb = `rgba(${rect.color.red},${rect.color.green},${rect.color.blue},1.0)`;
+                            // ctx.font = rect.font;
+                            ctx.font = scene[key].Plan.Style;
+                            if (rect.outline) {
+                                // console.log(rect.letter, i);
+                                let block = scene[key].Plan.Font + scene[key].Plan.Spacing;
+                                ctx.rect(rect.x, rect.y - block, rect.width, rect.height);
+                            }
+                            ctx.fillStyle = strRgb;
+                            // ctx.rect(rect.x, rect.y, rect.width, rect.height);
+                            // ctx.fillText(rect.letter, rect.x, rect.y + rect.height);
+                            ctx.fillText(rect.letter, rect.x, rect.y);
+                            ctx.stroke();
+
+                        });
+                    }
+                    ctx.restore();
+                }
+                function drawWordMarked() {
+                    ctx.beginPath();
+                    for (var key in scene) {
+                        let wordBoard = scene[key].WordBoard;
+                        // wordBoard.forEach(arr => {
+                        for (let i = 0; i < wordBoard.length; i++) {
+                            let arr = wordBoard[i].filter(x => !!x.isVisible);
+                            //debugger;
+                            //console.log(arr);
+                            arr.forEach((l, index) => {
+                                // console.log(l.letter);
+                                let startLeftX = l.x - 2;
+                                let startY = l.y - l.height;
+                                let endRightX = l.x + l.width - 2;
+                                let endRightY = l.y + 2;
+
+                                if (l.box.top) {
+                                    if (l.direction === 2 && index === 0) {
+                                        ctx.moveTo(startLeftX, startY);
+                                        endRightX = endRightX - (l.width / 2);
+                                        ctx.lineTo(endRightX, startY);
+                                    }
+                                    else if (l.direction === 2 && index === arr.length - 1) {
+                                        startLeftX = startLeftX + (l.width / 2);
+                                        ctx.moveTo(startLeftX, startY);
+                                        ctx.lineTo(endRightX, startY);
+                                    }
+                                    else {
+                                        ctx.moveTo(startLeftX, startY);
+                                        ctx.lineTo(endRightX, startY);
+                                    }
+                                }
+                                if (l.box.left) {
+                                    ctx.moveTo(startLeftX, startY);
+                                    ctx.lineTo(startLeftX, endRightY);
+                                }
+                                if (l.box.right) {
+                                    ctx.moveTo(endRightX, startY);
+                                    ctx.lineTo(endRightX, endRightY);
+                                }
+                                if (l.box.bottom) {
+
+                                    ctx.moveTo(startLeftX, endRightY);
+                                    ctx.lineTo(endRightX, endRightY);
+
+                                }
+                                if (l.direction === 4 && index === arr.length - 1) {
+                                    ctx.moveTo(arr[0].x + (arr[0].width / 2), arr[0].y - arr[0].height);
+                                    ctx.lineTo(startLeftX + 4, l.y - l.height);
+                                    ctx.moveTo(arr[0].x + (arr[0].width / 2), arr[0].y + 2);
+                                    ctx.lineTo(startLeftX + 4, l.y + 2);
+                                }
+                                if (l.direction === 6 && index === arr.length - 1) {
+                                    ctx.moveTo(arr[0].x, arr[0].y - arr[0].height);
+                                    ctx.lineTo(startLeftX + l.width - 2, l.y - l.height);
+                                    ctx.moveTo(arr[0].x, arr[0].y);
+                                    ctx.lineTo(startLeftX + l.width, l.y + 2);
+                                }
+                                if (l.direction === 2 && index === arr.length - 1) {
+                                    ctx.moveTo(arr[0].x + (arr[0].width / 2) - 2, arr[0].y - arr[0].height);
+                                    ctx.lineTo(startLeftX, startY);
+                                    ctx.moveTo(arr[0].x + (arr[0].width / 2) - 2, arr[0].y);
+                                    ctx.lineTo(startLeftX, endRightY);
+
+                                }
+                                if (l.direction === 8 && index === arr.length - 1) {
+                                    ctx.moveTo(arr[0].x, arr[0].y - arr[0].height);
+                                    ctx.lineTo(startLeftX + l.width, l.y - l.height);
+                                    ctx.moveTo(arr[0].x, arr[0].y);
+                                    ctx.lineTo(startLeftX + l.width, l.y);
+                                }
+                                ctx.stroke();
+                            });
+                            //break;
+                        }
+                        // });
+                    }
+                }
+                function fillWordDropDown(wordList, sceneName) {
+
+                    let rectSelect = $('#ddlSelectWord');
+                    let iter = 0;
+                    wordList.forEach(row => {
+                        let word = '';
+                        row.forEach(l => {
+                            word += l.letter;
+
+                        });
+                        rectSelect.append($('<option></option>').val(sceneName + ':' + iter).html(word));
+                        iter++;
+                    });
+
+
+                }
+                function drawRects() {
+                    //ctx.font = "bold 14px Courier";
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.beginPath();
+                    ctx.save();
+                    allRects.forEach(rect => {
+                        let strRgb = `rgba(${rect.color.red},${rect.color.green},${rect.color.blue},1.0)`;
+                        ctx.font = rect.font;
+                        if (rect.outline) {
+                            ctx.rect(rect.x, rect.y, rect.width, rect.height);
+                        }
+                        ctx.fillStyle = strRgb;
+                        // ctx.rect(rect.x, rect.y, rect.width, rect.height);
+                        ctx.fillText(rect.letter, rect.x, rect.y + rect.height);
+                        ctx.stroke();
+                        ctx.restore();
+                    });
+
+                }
+                function getMousePos(evt) {
+                    var rect = canvas.getBoundingClientRect();
+
+                    //return new vector2d(evt.clientX - rect.left,evt.clientY - rect.top,-1,-1);
+                    return new Point2D(evt.clientX - rect.left, evt.clientY - rect.top);
+                }
+                function findLetters(xPos, yPos, sceneKey) {
+                    let single = scene[sceneKey].PuzzleBoard.findIndex(rect => { return rect.x === xPos && rect.y === yPos });
+
+                    return single;
+                }
+                function placeOnPuzzleMod(sceneKey, indx, word, direction) {
+                    let pickedSlot = scene[sceneKey].PuzzleBoard[indx];
+                    let mod = scene[sceneKey].Modulus;
+                    let selectRects = [];
+
+                    Array.prototype.forEach.call(word, (l, index) => {
+
+                        pickedSlot.letter = l;
+                        selectRects.push(pickedSlot);
+                        pickedSlot.direction = direction;
+                        pickedSlot.index = indx;
+                        calcWordBoundary(pickedSlot, index, word.length);
+                        if (direction === 1) { //U
+                            indx -= 1;
+                        }
+                        else if (direction === 2) {//RU
+                            indx += mod;
+                        }
+                        else if (direction === 3) { //R
+                            indx += (mod + 1);
+                        }
+                        else if (direction === 4) { //RD
+                            indx += (mod + 2);
+                        }
+                        else if (direction === 5) {//D
+                            indx += 1;
+                        }
+                        else if (direction === 6) {//LU
+                            indx -= (mod + 2)
+                        }
+                        else if (direction === 7) { //L
+                            indx -= (mod + 1)
+                        }
+                        else if (direction === 8) { //LD
+                            indx -= mod;
+                        }
+                        pickedSlot = scene[sceneKey].PuzzleBoard[indx]
+                    });
+                    return selectRects;
+                }
+                function placeOnPuzzle(sceneKey, indx, word, direction) {
+                    let pickedSlot = scene[sceneKey].PuzzleBoard[indx];
+                    let plan = scene[sceneKey].Plan;
+                    let block = plan.Font + plan.Spacing;
+                    let selectRects = [];
+
+                    let x = pickedSlot.x;
+                    let y = pickedSlot.y;
+                    Array.prototype.forEach.call(word, (l, index) => {
+
+                        pickedSlot.letter = l;
+                        selectRects.push(pickedSlot);
+                        pickedSlot.direction = direction;
+                        calcWordBoundary(pickedSlot, index, word.length);
+                        if (direction === 1) { //U
+                            y -= block;
+                        }
+                        else if (direction === 2) { //RU
+                            x += block;
+                            y -= block;
+                        }
+                        else if (direction === 3) { //R
+                            x += block;
+
+                        }
+                        else if (direction === 4) { //RD
+                            x += block;
+                            y += block;
+                        }
+                        else if (direction === 5) { //D
+
+                            y += block;
+                        }
+                        else if (direction === 6) { //LD
+                            x -= block
+                            y += block
+                        }
+                        else if (direction === 7) { //L
+                            x -= block;
+                        }
+                        else if (direction === 8) { //LU
+                            x -= block;
+                            y -= block;
+                        }
+                        let indx = scene[sceneKey].PuzzleBoard.findIndex(rect => { return rect.x === x && rect.y === y });
+                        if (indx < 0) {
+                            y += 2;
+                            indx = scene[sceneKey].PuzzleBoard.findIndex(rect => { return rect.x === x && rect.y === y });
+                        }
+                        pickedSlot = scene[sceneKey].PuzzleBoard[indx];
+                        //debugger;
+
+                    });
+                    return selectRects;
+                }
+                function placeMockWordsPuzzle() {
+
+                    // let pointTopLeft = new Point2D(parseInt($('#topLeftCornerX').val()), parseInt($('#topLeftCornerY').val()));
+                    //let pointTopRight = new Point2D(parseInt($('#topRightCornerX').val()), parseInt($('#topRightCornerY').val()));
+                    //let pointBottomLeft = new Point2D(parseInt($('#bottomLeftCornerX').val()), parseInt($('#bottomLeftCornerY').val()));
+                    // let pointBottomRight = new Point2D(parseInt($('#bottomRightCornerX').val()), parseInt($('#bottomRightCornerY').val()));
+                    //calcute numbers
+
+                    let U = 1;
+                    let RU = 2;
+                    let R = 3;
+                    let RD = 4;
+                    let D = 5;
+                    let LD = 8;
+                    let L = 7;
+                    let LU = 6;
+
+                    let sceneKey = $('#ddlSelectPuzzle').val();
+                    let mod = scene[sceneKey].Modulus;
+                    //let topLeftIndex = scene[sceneKey].PuzzleBoard.findIndex(rect => { return rect.x === pointTopLeft.x && rect.y === pointTopLeft.y });
+                    //let topRightIndex = scene[sceneKey].PuzzleBoard.findIndex(rect => { return rect.x === pointTopRight.x && rect.y === pointTopRight.y });
+                    let topLeftIndex = parseInt($('#topLeftCorner').val());
+                    let topRightIndex = parseInt($('#topRightCorner').val());
+                    let pointBottomLeft = parseInt($('#bottomLeftCorner').val());
+
+                    let copyTopRightIndex = topRightIndex;
+                    subBoard = [];
+                    let quad = [];
+                    //debugger;
+                    do {
+                        while (topRightIndex !== topLeftIndex) {
+                            subBoard.push(scene[sceneKey].PuzzleBoard[topRightIndex]);
+                            topRightIndex -= (mod + 1);
+
+                        }
+                        copyTopRightIndex += 1;
+                        topRightIndex = copyTopRightIndex;
+                        //topRightIndex += 1;
+                        topLeftIndex += 1;
+                        //debugger;
+                    } while (topLeftIndex !== pointBottomLeft);
+
+
+                    var words = $('#txtWords').val().split('\n');
+                    //console.log(words);
+                    words.forEach(mockWord => {
+                        //debugger;
+
+
+                        let alreadyPicked = [];
+                        let direction = 0;
+                        let pickedIndx = Math.floor((Math.random() * subBoard.length - 1));
+                        let pickedRect = subBoard[pickedIndx];
+                        let realIndx = scene[sceneKey].PuzzleBoard.findIndex(rec => rec.x === pickedRect.x && rec.y === pickedRect.y);
+                        let copyIndx = pickedIndx;
+                        quad.push(U);
+                        quad.push(RU);
+                        quad.push(R);
+                        quad.push(RD);
+                        quad.push(D);
+                        quad.push(LD);
+                        quad.push(L);
+                        quad.push(LU);
+
+                        if (alreadyPicked.length === 0) {
+                            direction = quad[Math.floor((Math.random() * quad.length - 1))];
+                            // alreadyPicked.push(direction);
+                        }
+                        else {
+                            quad = [];
+                            console.log('Matched...', direction);
+                        }
+                        /*  else {
+                              do {
+                                  direction = quad[Math.floor((Math.random() * quad.length - 1))];
+
+                                  alreadyPicked.forEach(indx => {
+
+                                      mockWord.forEach(l => {
+                                          if (direction === U) {
+                                              copyIndx -= 1;
+                                              if (copyIndx <= indx) {
+                                                  quad.splice(0, 1);
+                                                  return;
+                                              }
+                                          }
+                                      });
+
+                                  });
+                              } while (quad.length > 0);
+                          }*/
+
+
+                        // debugger;
+                        if (quad.length > 0) {
+                            let newRects = placeOnPuzzleMod(sceneKey, realIndx, mockWord.toUpperCase(), direction);
+                            scene[sceneKey].WordBoard.push(newRects);
+                        }
+                    });
+
+                    closeModal();
+                    drawRectsScene();
+                    drawWordMarked();
+
+                }
+                /*
+                function addWordsDom(wordLs) {
+                    $('#wordsPanel').empty();
+                    const parentPanel = $('#wordsPanel')
+                    wordLs.forEach((word) => {
+                        const li = $('<li/>')
+                            .attr('role', 'menuitem')
+                            .appendTo(parentPanel);
+
+                        const input = $('<input/>')
+                            .attr('type', 'checkbox')
+                            .appendTo(li);
+
+                        $('<a/>')
+                            .text(word)
+                            .appendTo(li);
+
+                    });
+                }*/
+                function intersection(array1, array2) {
+                    return array1.filter(value => -1 !== array2.indexOf(value));
+                }
+                // event handlers
+                $('#btnStickBatchWords').click(() => {
+
+                    placeMockWordsPuzzle();
+
+
+                });
+                $('#btnFillWords').click(() => {
+                    var words = $('#txtNewWords').val().split('\n');
+                    addWordsDom(words);
+                });
+                $('#btnShowPanelWords').click(() => {
+                    $('#highlightCanvas').show();
+                });
+
+                function closeModal() {
+                    $('#batchModal').hide();
+                    $('#highlightCanvas').hide();
+                }
+                $('#btnShowBatchModal').click(() => {
+                    $('#batchModal').show();
+                    //$('#batchModal').style.display = 'block';
+
+                });
+                $('#btnPickRect').click(() => {
+                    let rectPos = parseInt($('#allRects').val().replace('Rect #', ''));
+                    let s = $('#ddlSelectPuzzle').val();
+                    //let mod = scene[s].Modulus;
+                    let newPos = rectPos + parseInt($('#txtHowMany').val());
+                    // var rect = scene[s].PuzzleBoard[newPos];
+                    $('#allRects').val(newPos);
+                });
+                $('#btnCreateRect').click(() => {
+                    let rect = BasicRect();
+                    let posX = parseInt($('#txtPosX').val());
+                    let posY = parseInt($('#txtPosY').val());
+                    let width = parseInt($('#txtWidth').val());
+                    let height = parseInt($('#txtHeight').val());
+                    let boundTo = parseInt($('#ddlBoundTo').val()) >= 0 ? parseInt($('#ddlBoundTo').val()) - 1 : -1;
+                    let letter = $('#txtLetter').val() === '' ? generateRandomLetter() : $('#txtLetter').val();
+                    let red = $('#txtRed').val();
+                    let green = $('#txtGreen').val();
+                    let blue = $('#txtBlue').val();
+
+                    if (boundTo >= 0) {
+                        allRects[boundTo].deltaX = allRects[boundTo].x - posX;
+                        allRects[boundTo].deltaY = allRects[boundTo].y - posY;
+                    }
+                    rect = {
+                        ...rect,
+                        x: posX,
+                        y: posY,
+                        width: width,
+                        height: height,
+                        letter: letter,
+                        font: $('#ddlFontTypes').val(),
+                        boundTo: boundTo,
+                        color: {
+                            red: red,
+                            green: green,
+                            blue: blue
+                        }
+                    };
+                    // allRects.push(rect);
+                    scene[defaultName].push(rect);
+                    //add to drop down
+                    let rectSelect = $('#allRects');
+                    rectSelect.append($('<option></option>').val(allRects.length).html('Rect #' + allRects.length));
+                    let rectSelectBound = $('#ddlBoundTo');
+                    rectSelectBound.append($('<option></option>').val(allRects.length).html('Rect #' + allRects.length));
+                    drawRectsScene();
+                    drawWordMarked();
+                });
+                $('#ddlSelectScene').on('change', () => {
+                    if ($('#ddlSelectScene').val() === '') {
+                        return;
+                    }
+                    console.log('Sending....', $('#ddlSelectScene').val());
+                    $('#txtPuzzleName').val($('#ddlSelectScene').val());
+                    var url = 'http://localhost:5233/Data/GetSingleScene/?scene=' + $('#ddlSelectScene').val();
+                    $.ajax({
+                        type: "GET",
+                        traditional: true,
+                        url: url,
+                        cache: false,
+                        contentType: 'application/json',
+                        success: function (resp) {
+                            console.log(resp);
+                            //reset the scene
+                            scene = {};
+
+                            Array.prototype.forEach.call(resp, (p) => {
+                                let $rectSelect = $('#ddlSelectPuzzle');
+                                $rectSelect.append($('<option></option>').val(p.SectionName).html(p.SectionName));
+
+                                let lastIndx = p.Words.lastIndexOf(w => w.Letter === '$')
+                                let mainArr = [];
+                                let localArr = [];
+                                for (let i = 0; i < p.Words.length; i++) {
+
+                                    if (p.Words[i].Letter !== '$') {
+                                        localArr.push(p.Words[i])
+                                    }
+                                    else {
+                                        let strBuilder = '';
+                                        localArr.forEach(w => {
+                                            strBuilder += w;
+                                        });
+                                        // console.log('String Builder =>', strBuilder);
+                                       // globalWords.push(strBuilder);
+                                        mainArr.push(localArr);
+                                        localArr = [];
+                                    }
+                                }
+                                //debugger;
+                                let plan = p.Plan;
+                                scene[p.SectionName] = {
+                                    PuzzleBoard: convertToRects(p.Pixels, plan),
+                                    WordBoard: convertWords(mainArr, plan),
+                                    Plan: p.Plan,
+                                    Modulus: p.Modulus
+                                };
+                            });
+
+                            drawRectsScene();
+                            drawWordMarked();
+                        }
+                    });
+
+                });
+                $('#allRects').change(() => {
+                    const currPos = parseInt($('#allRects').val().replace('Rect #', ''));
+                    // const selectedRect = allRects[currPos-1];
+                    const selectedRect = scene[defaultName].PuzzleBoard[currPos - 1];
+                    $('#txtPosX').val(selectedRect.x);
+                    $('#txtPosY').val(selectedRect.y);
+                    $('#txtWidth').val(selectedRect.width);
+                    $('#txtHeight').val(selectedRect.height);
+                    $('#txtLetter').val(selectedRect.letter);
+                    $('#ddlFontTypes').val(selectedRect.font);
+                    $('#ddlBoundTo').val(selectedRect.boundTo + 1);
+                    $('#txtRed').val(selectedRect.color.red);
+                    $('#txtGreen').val(selectedRect.color.green);
+                    $('#txtBlue').val(selectedRect.color.blue);
+                });
+                $('#ddlCurrentPuzzles').change(() => {
+                    const puzzleName = $('#dllCurrentPuzzles').val();
+                    defaultName = puzzleName;
+                    //lets check if the puzzle is not loaded in memory
+                    if (!(scene[puzzleName] && scene[puzzleName].length > 0)) {
+
+                        var url = 'http://localhost:55097/Data/GetPuzzleNames/?puzzleName=' + puzzleName;
+
+                        $.ajax({
+                            type: "GET",
+                            traditional: true,
+                            url: url,
+                            cache: false,
+                            contentType: 'application/json',
+                            success: function (resp) {
+                                scene[puzzleName] = resp;
+                                let $rectSelect = $('#allRects');
+                                let $rectSelectBound = $('#ddlBoundTo');
+                                $rectSelect.remove();
+                                $rectSelectBound.remove();
+                                scene[puzzleName].forEach(r => {
+                                    $rectSelect.append($('<option></option>').val(allRects.length).html('Rect #' + allRects.length));
+
+                                    $rectSelectBound.append($('<option></option>').val(allRects.length).html('Rect #' + allRects.length));
+                                });
+                                //console.log(resp);
+                                // colorTheCanvas(resp);
+                                // loadMetaRects(resp);
+                            }
+                        });
+                    } else {
+                        let $rectSelect = $('#allRects');
+                        let $rectSelectBound = $('#ddlBoundTo');
+                        $rectSelect.remove();
+                        $rectSelectBound.remove();
+                        scene[puzzleName].forEach(r => {
+                            $rectSelect.append($('<option></option>').val(allRects.length).html('Rect #' + allRects.length));
+
+                            $rectSelectBound.append($('<option></option>').val(allRects.length).html('Rect #' + allRects.length));
+                        });
+                    }
+
+
+                });
+                $('#ddlSelectWord').on('change', function () {
+                    if (this.value === '') {
+                        return;
+                    }
+                    this.value.split(':');
+                });
+                $('#ddlSelectPuzzle').on('change', function () {
+                    if (this.value === '')
+                        return;
+
+                    defaultName = this.value;
+                    let $rectSelect = $('#allRects');
+                    let $rectSelectBound = $('#ddlBoundTo');
+                    // $rectSelect.remove();
+                    // $rectSelectBound.remove();
+                    $('#allRects option').remove();
+                    $('#ddlBoundTo option').remove();
+                    let cntr = 1;
+                    scene[this.value].PuzzleBoard.forEach(r => {
+                        $rectSelect.append($('<option></option>').val(cntr).html('Rect #' + cntr));
+
+                        $rectSelectBound.append($('<option></option>').val(cntr).html('Rect #' + cntr));
+
+                        cntr += 1;
+                    });
+                })
+                $('#btnImport').click(() => {
+
+                    $("#puzzleLoader :text").each(function (index) {
+                        // debugger;
+                        let childSelects = $("#puzzleLoader select").toArray();
+                        var realPuzzleName = $(childSelects[index]).val();
+                        let txtPuzzle = $(this).val();
+                        // console.log('puzzles rendered....');
+                        if (txtPuzzle !== '' && !(scene[txtPuzzle] && scene[txtPuzzle].length > 0)) {
+                            //  var url = 'http://localhost:55097/Data/GetSinglePuzzle/?puzzleName=' + realPuzzleName;
+                            var url = 'http://localhost:5233/Data/GetSinglePuzzle/?puzzleName=' + realPuzzleName;
+
+                            $.ajax({
+                                type: "GET",
+                                traditional: true,
+                                url: url,
+                                cache: false,
+                                contentType: 'application/json',
+                                success: function (resp) {
+                                    // debugger;
+                                    //convertWords(resp.Words)
+                                    console.log(resp);
+                                    let plan = resp.Plan;
+                                    scene[txtPuzzle] = {
+                                        PuzzleBoard: convertToRects(resp.AllLetters, plan),
+                                        WordBoard: [],
+                                        Plan: resp.Plan,
+                                        Modulus: resp.Modulus
+                                    };
+                                    //fillWordDropDown(resp.Words, txtPuzzle);
+                                    let $rectSelect = $('#ddlSelectPuzzle');
+                                    $rectSelect.append($('<option></option>').val(txtPuzzle).html(txtPuzzle));
+                                    drawRectsScene();
+                                    //drawWordMarked();
+
+                                }
+                            });
+                        }
+                    });
+                });
+                $('#btnClear').click(() => {
+                    $('#puzzleLoader').empty();
+                });
+                $('#btnRollBackRect').click(() => {
+                    const currPos = parseInt($('#allRects').val().replace('Rect #', ''));
+                    if (allRects[currPos - 1].rollBackRect !== null)
+                        allRects[currPos - 1] = allRects[currPos - 1].rollBackRect
+                });
+                $('#btnUpdateRect').click(() => {
+                    const currPos = parseInt($('#allRects').val().replace('Rect #', ''));
+                    const originalRect = _.clone(allRects[currPos - 1], true);
+
+                    let rect = BasicRect();
+                    let posX = parseInt($('#txtPosX').val());
+                    let posY = parseInt($('#txtPosY').val());
+                    let width = parseInt($('#txtWidth').val());
+                    let height = parseInt($('#txtHeight').val());
+                    let letter = $('#txtLetter').val() === '' ? generateRandomLetter() : $('#txtLetter').val();
+                    let boundTo = parseInt($('#ddlBoundTo').val()) >= 0 ? parseInt($('#ddlBoundTo').val()) - 1 : -1;
+                    let red = $('#txtRed').val();
+                    let green = $('#txtGreen').val();
+                    let blue = $('#txtBlue').val();
+
+                    if (boundTo >= 0) {
+                        scene[defaultName][boundTo].deltaX = scene[defaultName][boundTo].x - posX;
+                        scene[defaultName][boundTo].deltaY = scene[defaultName][boundTo].y - posY;
+
+                        let pos = boundTo;
+                        while (pos >= 0) {
+                            if ($('input[name="chkCascadeX"]:checked').length > 0) {
+                                scene[defaultName][pos].x = posX;
+                            }
+                            if ($('input[name="chkCascadeY"]:checked').length > 0) {
+                                scene[defaultName][pos].y = posX;
+                            }
+                            if ($('input[name="chkCascadeColor"]:checked').length > 0) {
+                                scene[defaultName][pos].color = {
+                                    red: red,
+                                    green: green,
+                                    blue: blue
+                                };
+                            }
+                            pos = scene[defaultName][pos].boundTo;
+                        }
+                    }
+
+                    rect = {
+                        ...rect,
+                        x: posX,
+                        y: posY,
+                        width: width,
+                        height: height,
+                        letter: letter,
+                        font: $('#ddlFontTypes').val(),
+                        boundTo: boundTo,
+                        color: {
+                            red: red,
+                            green: green,
+                            blue: blue
+                        },
+                        rollBackRect: originalRect
+                    };
+                    //allRects[currPos - 1] = rect;
+                    scene[defaultName][currPos - 1] = rect;
+                    drawRectsScene();
+                    drawWordMarked();
+                });
+                $('#btnClearWords').click(() => {
+                    $('#wordsPanel').empty();
+                });
+                $('#btnStickToPuzzle').click(() => {
+                    let rows = $('#wordsPanel div').toArray();
+                    let sceneId = $('#ddlSelectPuzzle').val();
+                    const wordSoFar = [];
+                    const currWordsArr = scene[sceneId].WordBoard;
+                    currWordsArr.forEach(wordArr => {
+                        let strBuilder = '';
+                        wordArr.filter(x => !!x.isVisible).forEach(rect => {
+                            strBuilder += rect.letter;
+                        });
+                        wordSoFar.push(strBuilder);
+                    });
+                    console.log(rows[0]);
+                    rows.forEach(row => {
+
+                        let textFields = $(row).find('input[type=text]').toArray();
+                        let dropDownVal = $(row).find('select').val();
+                        console.log($(textFields[0]).val(), dropDownVal);
+                        let word = $(textFields[0]).val().toUpperCase();
+                        let xpos = parseInt($(textFields[1]).val());
+                        let ypos = parseInt($(textFields[2]).val());
+                        // let newRect = BasicRect();
+                        console.log('Words Found =>', wordSoFar);
+                        let wordIndx = wordSoFar.findIndex(w => { return w.toLowerCase() === word.toLowerCase() });
+                        if (wordIndx >= 0) {
+                            
+                            return;
+                        }
+                        globalWords.push(word);
+
+                        let pickedIndex = findLetters(xpos, ypos, $('#ddlSelectPuzzle').val());
+                        let newRects = placeOnPuzzleMod($('#ddlSelectPuzzle').val(), pickedIndex, word, parseInt(dropDownVal));
+                        //let newRects = placeOnPuzzle($('#ddlSelectPuzzle').val(), pickedIndex, word, parseInt(dropDownVal))
+                        scene[sceneId].WordBoard.push(newRects);
+                        drawRectsScene();
+                        drawWordMarked();
+                    });
+
+
+                });
+                $('#chkRectOutline').click(() => {
+                    const currPos = parseInt($('#allRects').val().replace('Rect #', '')) - 1;
+                    // debugger;
+                    // allRects[currPos].outline = !allRects[currPos].outline;
+                    scene[defaultName].PuzzleBoard[currPos].outline = !scene[defaultName].PuzzleBoard[currPos].outline;
+                    drawRectsScene();
+                    drawWordMarked();
+
+                });
+                $('#chkRectBoundTo').click(() => {
+                    let currPos = parseInt($('#allRects').val().replace('Rect #', '')) - 1;
+                    while (currPos >= 0) {
+                        //allRects[currPos].outline = !allRects[currPos].outline;
+                        //currPos = allRects[currPos].boundTo;
+                        scene[defaultName].PuzzleBoard[currPos].outline = !scene[defaultName].PuzzleBoard[currPos].outline;
+                        currPos = scene[defaultName].PuzzleBoard[currPos].boundTo;
+                    }
+                    drawRectsScene();
+                    drawWordMarked();
+                });
+                canvas.onmouseup = function (evt) {
+                    mouseIsDown = false;
+                    //refreshCanvas();
+                };
+                canvas.onmousemove = (evt) => {
+                    var pt = getMousePos(evt);
+                    if ($('#chkMoveCanvas').is(":checked") && mouseIsDown) {
+                        let deltaX = pt.x - initialDown.x;
+                        let deltaY = pt.y - initialDown.y;
+                        initialDown = new Point2D(pt.x, pt.y);
+                        updateRectPositions(deltaX, deltaY);
+                    }
+                    drawRectsScene();
+                    drawWordMarked();
+                }
+                canvas.onmousedown = (e) => {
+                    var currPos = getMousePos(e);
+                    initialDown = new Point2D(currPos.x, currPos.y);
+                    mouseIsDown = true;
+                    if ($('#chkMoveShape').is(":checked")) {
+                        updateRectByClick(currPos.x, currPos.y);
+                    }
+                    else if ($('#chkMoveLetter').is(":checked")) {
+                        const currClick = getMousePos(e);
+                        let currPos = parseInt($('#allRects').val().replace('Rect #', '')) - 1;
+                        console.log(currClick.x, currClick.y);
+                        let deltaX = 0, deltaY = 0;
+                        // allRects[currPos].x = currClick.x;
+                        //allRects[currPos].y = currClick.y;
+                        scene[defaultName][currPos].x = currClick.x;
+                        scene[defaultName][currPos].y = currClick.y;
+                        while (currPos >= 0) {
+                            currPos = scene[defaultName][currPos].boundTo;
+                            if (currPos < 0)
+                                break;
+
+                            //allRects[currPos].x = currClick.x + allRects[currPos].deltaX;
+                            //allRects[currPos].y = currClick.y + allRects[currPos].deltaY;
+                            scene[defaultName][currPos].x = currClick.x + scene[defaultName][currPos].deltaX;
+                            scene[defaultName][currPos].y = currClick.y + scene[defaultName][currPos].deltaY;
+
+                        }
+
+
+                    }
+                    drawRectsScene();
+                    drawWordMarked();
+                }
+                function colorTheCanvas(pixels) {
+                    ctx.font = "bold 14px Courier";
+
+                    pixels.forEach(p => {
+                        let strRgb = `rgba(${p.Red},${p.Green},${p.Blue},1.0)`;
+                        //ctx.fillStyle = "#FF0000";
+                        // ctx.fillStyle = "rgba(126, 129, 0, 1.0)";
+                        ctx.fillStyle = strRgb;
+                        //ctx.fillRect(p.Position.x,p.Position.y,1,1);
+                        ctx.fillText(p.Letter, p.Position.x, p.Position.y);
+                    });
+                    ctx.stroke();
+                }
+                function calcWordBoundary(letter, index, wordLen) {
+                    if (letter.direction === 1) {
+                        if (index === 0) {
+                            letter.box.bottom = 1;
+                            letter.box.left = 1;
+                            letter.box.right = 1;
+                        }
+                        else if (index === wordLen - 1) {
+                            letter.box.top = 1;
+                            letter.box.left = 1;
+                            letter.box.right = 1;
+                        }
+                        else {
+                            letter.box.right = 1;
+                            letter.box.left = 1;
+                        }
+                    }
+                    else if (letter.direction === 2) {
+                        if (index === 0) {
+                            letter.box.top = 1;
+                            letter.box.left = 1;
+                            letter.box.bottom = 1;
+                        }
+                        else if (index === wordLen - 1) {
+                            letter.box.top = 1;
+                            letter.box.right = 1;
+                            letter.box.bottom = 1;
+                        }
+
+                    }
+                    else if (letter.direction === 3) {
+                        if (index === 0) {
+                            letter.box.top = 1;
+                            letter.box.left = 1;
+                            letter.box.bottom = 1;
+                        }
+                        if (index === wordLen - 1) {
+                            letter.box.right = 1;
+                            letter.box.top = 1;
+                            letter.box.bottom = 1;
+                        }
+                        else {
+                            letter.box.top = 1;
+                            letter.box.bottom = 1;
+                        }
+                    }
+                    else if (letter.direction === 4) {
+                        if (index === 0) {
+                            letter.box.top = 1;
+                            letter.box.left = 1;
+                            letter.box.bottom = 1;
+                        }
+                        else if (index === wordLen - 1) {
+                            letter.box.top = 1;
+                            letter.box.right = 1;
+                            letter.box.bottom = 1;
+                        }
+                    }
+                    else if (letter.direction === 5) {
+                        if (index === 0) {
+                            letter.box.top = 1;
+                            letter.box.left = 1;
+                            letter.box.right = 1;
+                        }
+                        else if (index === wordLen - 1) {
+                            letter.box.left = 1;
+                            letter.box.right = 1;
+                            letter.box.bottom = 1;
+                        }
+                        else {
+                            letter.box.left = 1;
+                            letter.box.right = 1;
+                        }
+                    }
+                    else if (letter.direction === 6) {
+                        if (index === 0) {
+                            letter.box.top = 1;
+                            letter.box.right = 1;
+                            letter.box.bottom = 1;
+                        }
+                        else if (index === wordLen - 1) {
+                            letter.box.left = 1;
+                            letter.box.top = 1;
+                            letter.box.bottom = 1;
+                        }
+
+                    }
+                    else if (letter.direction === 7) {
+                        if (index === 0) {
+                            letter.box.right = 1;
+                            letter.box.bottom = 1;
+                            letter.box.top = 1;
+                        }
+                        else if (index === wordLen - 1) {
+                            letter.box.left = 1;
+                            letter.box.top = 1;
+                            letter.box.bottom = 1;
+                        }
+                        else {
+                            letter.box.top = 1;
+                            letter.box.bottom = 1;
+                        }
+                    }
+                    else if (letter.direction === 8) {
+                        if (index === 0) {
+                            letter.box.top = 1;
+                            letter.box.right = 1;
+                            letter.box.bottom = 1;
+                        }
+                        else if (index === wordLen - 1) {
+                            letter.box.top = 1;
+                            letter.box.left = 1;
+                            letter.box.bottom = 1;
+                        }
+                    }
+                }
+                function convertWords(actualWords, plan) {
+                    let collectAll = []
+                    let block = plan.Font + plan.Spacing;
+            
+                    let localWords = '';
+                    const gatherWords = [];
+                    //debugger;
+                    Array.prototype.forEach.call(actualWords, (pArr, iter) => {
+
+                        let localArr = [];
+                        // debugger;
+                        Array.prototype.forEach.call(pArr, (p, i) => {
+                            //  debugger;
+                            let rect = BasicRect();
+                            let newRect = {
+                                ...rect,
+                                x: p.Position.x,
+                                y: p.Position.y,
+                                letter: p.Letter,
+                                width: block,
+                                height: block,
+                                boundTo: -1,
+                                direction: p.Direction,
+                                font: 'bold 14px Courier',
+                                isVisible: true,
+                                box: {
+                                    top: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    left: 0
+                                },
+                                color: {
+                                    red: p.Red,
+                                    green: p.Green,
+                                    blue: p.Blue
+                                }
+                            }
+
+                            calcWordBoundary(newRect, i, pArr.length);
+                            localArr.push(newRect);
+                            localWords += p.Letter;
+                            //debugger;
+                        });
+                       // console.log('---Word Arrays =>', pArr[iter]);
+                        gatherWords.push({
+                            word: localWords,
+                            direction: pArr[iter].Direction,
+                            posX: pArr[iter].Position.x,
+                            posY: pArr[iter].Position.y
+                        });
+                        collectAll.push(localArr);
+                        localWords = '';
+                    });
+                    console.log('----The Words---', gatherWords);
+                    appendWordsDom(gatherWords);
+                    return collectAll;
+                }
+                function convertToRects(pixels, plan) {
+                    let localRect = [];
+                    let smallestX = Number.MAX_SAFE_INTEGER;
+                    let largestX = 0;
+                    let smallestY = Number.MAX_SAFE_INTEGER;
+                    let largestY = 0;
+                    let block = plan.Font + plan.Spacing;
+
+                    var reStart = /\^/g;
+                    var reEnd = /\$/g;
+                    var reNumbers = /[0-9]+/g;
+
+                    pixels.forEach((p,i) => {
+                        if (p.Position.x < smallestX) {
+                            smallestX = p.Position.x;
+                        }
+                        if (p.Position.x > largestX) {
+                            largestX = p.Position.x;
+                        }
+                        if (p.Position.y < smallestY) {
+                            smallestY = p.Position.y;
+                        }
+                        if (p.Position.y > largestY) {
+                            largestY = p.Position.y;
+                        }
+                        let rect = BasicRect();
+                        let newRect = {
+                            ...rect,
+                            x: p.Position.x,
+                            y: p.Position.y,
+                            letter: p.Letter.replace(reStart, '').replace(reEnd, '').replace(reNumbers, ''),
+                            width: block,
+                            height: block,
+                            boundTo: -1,
+                            index: i,
+                            font: plan.Style,
+                            color: {
+                                red: p.Red,
+                                green: p.Green,
+                                blue: p.Blue
+                            }
+                        }
+                        localRect.push(newRect);
+
+                    });
+
+                    //calculate the midPt
+                    let midPt = new Point2D((largestX - smallestX) / 2, (largestY - smallestY) / 2);
+                    localRect.forEach(rect => {
+                        rect.offCenterX = rect.x - midPt.x;
+                        rect.offCenterY = rect.y - midPt.y;
+                    })
+                    return localRect;
+                }
+                function loadMetaRects(pixels) {
+                    pixels.forEach(p => {
+                        let rect = BasicRect();
+                        let newRect = {
+                            ...rect,
+                            x: p.Position.x,
+                            y: p.Position.y,
+                            letter: p.Letter,
+                            width: 12,
+                            height: 12,
+                            boundTo: -1,
+                            font: 'bold 14px Courier',
+                            color: {
+                                red: p.Red,
+                                green: p.Green,
+                                blue: p.Blue
+                            }
+                        }
+                        allRects.push(newRect);
+                        let rectSelect = $('#allRects');
+                        rectSelect.append($('<option></option>').val(allRects.length).html('Rect #' + allRects.length));
+                        rectSelect = $('#ddlBoundTo');
+                        rectSelect.append($('<option></option>').val(allRects.length).html('Rect #' + allRects.length));
+                    });
+                }
+                function appendWordsDom(wordLs) {
+                    if (!wordLs) {
+                        wordLs = [];
+                        wordLs.push({
+                            word: '',
+                            direction: 1,
+                            posX: 0,
+                            posY:0
+                        });
+                    }
+                    $('#wordsPanel').empty();
+                    wordLs.forEach((wd, indx) => {
+                        $divRow = $('<div />')
+                        let $txtField = $('<input type="text" value="' + wd.word + '" />');
+                        let $spanTxt = $('<span />');
+                        let $spanDropDown = $('<span  style="margin-left:10px;" />');
+                        let $spanX = $('<span style="margin-left:10px;"  />');
+                        let $spanY = $('<span style="margin-left:10px;" />');
+                        let $spanImg = $('<span style="margin-left:5px;" />');
+                        let $txtX = $('<input type="text" size="3" value="' + wd.posX + '"/>');
+                        let $txtY = $('<input type="text" size="3" value="' + wd.posY + '"/>');
+                        let $img = $('<img />');
+                        $img.attr('src', '/Content/images/cross-small.jpg');
+                        $img.click(function () {
+                            let sceneId = $('#ddlSelectPuzzle').val();
+                            const selectedIndx = -1;
+                            const showUpWords = [];
+                            scene[sceneId].WordBoard.forEach((wordArr, i) => {
+                                const foundWord = wordArr.find(rect => rect.x === wd.posX && rect.y === wd.posY);
+                                if (foundWord) {
+                                    selectedIndx = i;
+                                    return;
+                                }
+                            });
+                            scene[sceneId].WordBoard[selectedIndx].forEach(rect => {
+                                rect.isVisible = false;
+                                scene[sceneId].PuzzleBoard[rect.index].letter = generateRandomLetter();
+                            });
+                            scene[sceneId].WordBoard.forEach((wordArr, i) => {
+                                let strBuilder = '';
+                                wordArr.forEach(rect => {
+                                    strBuilder += rect.letter;
+                                });
+                                showUpWords.push({
+                                    word: strBuilder,
+                                    direction: wordArr[i].direction,
+                                    posX: wordArr[i].x,
+                                    posY: wordArr[i].y
+                                });
+                            });
+                            appendWordsDom(showUpWords);
+                        });
+                        let $directionDropDown = $('<select />');
+                        let directions = [1, 2, 3, 4, 5, 6, 7, 8];
+                        directions.forEach(i => {
+                            $('<option />', { value: i, text: i }).appendTo($directionDropDown);
+                        });
+                        $directionDropDown.val(wd.direction);
+                        $spanTxt.append($txtField);
+                        $spanDropDown.append($directionDropDown);
+                        $spanX.append($txtX);
+                        $spanY.append($txtY);
+                        $spanImg.append($img);
+                        $divRow.append($spanTxt);
+                        $divRow.append($spanDropDown);
+                        $divRow.append($spanX);
+                        $divRow.append($spanY);
+                        $divRow.append($spanImg);
+                        $('#wordsPanel').append($divRow);
+                    });
+                }
+                function appendDomPuzzles(puzzleCnt) {
+                    let iter = 0;
+                    $('#puzzleLoader').empty();
+                    while (iter < puzzleCnt) {
+                        let $spanLabel = $('<span />');
+                        let $br1 = $('<br />');
+                        let $br2 = $('<br />');
+                        let $br3 = $('<br />');
+                        $spanLabel.html("<b>Load Puzzle:</b>");
+                        let $spanDropDown = $('<span />');
+                        let $puzzleDropDown = $('<select id="ddlPuzzle-' + iter + '" />');
+                        let $newTxtBox = $('<input type="text" id="puzzle-' + iter + '" />');
+                        $('<option />', { value: '', text: '--Select Puzzle--' }).appendTo($puzzleDropDown);
+                        allPuzzleNames.forEach(name => {
+                            $('<option />', { value: name, text: name }).appendTo($puzzleDropDown);
+                        });
+                        $puzzleDropDown.on('change', function () {
+                            // alert(this.id);
+                            if (this.value !== '') {
+                                let numPos = this.id.split('-')[1];
+                                $('#puzzle-' + numPos).val(this.value);
+                            }
+                            //alert(this.value);
+                        });
+                        $spanDropDown.append($puzzleDropDown);
+                        $('#puzzleLoader').append($spanLabel);
+                        $('#puzzleLoader').append($spanDropDown);
+                        $('#puzzleLoader').append($br1);
+                        $('#puzzleLoader').append($newTxtBox);
+                        $('#puzzleLoader').append($br3);
+                        $('#puzzleLoader').append($br2);
+                        iter++;
+                    }
+                }
+                function getSceneNames() {
+                    var url = 'http://localhost:5233/Data/GetSavedPuzzles';
+                    $.ajax({
+                        type: "GET",
+                        traditional: true,
+                        url: url,
+                        cache: false,
+                        contentType: 'application/json',
+                        success: function (resp) {
+                            console.log(resp);
+                            let selectScene = $('#ddlSelectScene');
+                            resp.forEach(s => {
+                                selectScene.append($('<option></option>').val(s).html(s));
+                            })
+
+
+
+                            // colorTheCanvas(resp);
+                            // loadMetaRects(resp);
+                        }
+                    });
+                }
+                function getPuzzleNames() {
+                    // var url = 'http://localhost:55097/Data/GetPuzzleNames';
+                    var url = 'http://localhost:5233/Data/GetPuzzleNames';
+
+                    $.ajax({
+                        type: "GET",
+                        traditional: true,
+                        url: url,
+                        cache: false,
+                        contentType: 'application/json',
+                        success: function (resp) {
+                            resp.forEach(f => {
+                                allPuzzleNames.push(f);
+                                // $('#ddlCurrentPuzzles').append($('<option></option>').val(f).html(f));
+                            });
+                            //console.log(resp);
+                            // colorTheCanvas(resp);
+                            // loadMetaRects(resp);
+                        }
+                    });
+
+                }
+                function getPixelsFromFile() {
+                    var url = 'http://localhost:55097/Data/GetPuzzles';
+
+
+                    $.ajax({
+                        type: "GET",
+                        traditional: true,
+                        url: url,
+                        cache: false,
+                        contentType: 'application/json',
+                        success: function (resp) {
+                            //console.log(resp);
+                            colorTheCanvas(resp);
+                            loadMetaRects(resp);
+                        }
+                    });
+
+                }
+                $('#btnAddWord').click(() => {
+                    appendWordsDom();
+                });
+                $('#btnShow').click(() => {
+                    let numImports = parseInt($('#txtImportPuzzles').val());
+                    appendDomPuzzles(numImports);
+                });
+                $('#btnSavePuzzle').click(function () {
+                    let sections = [];
+                    for (var k in scene) {
+                        sections.push({
+                            SectionName: k
+                        })
+                        let currSection = sections[sections.length - 1];
+                        currSection.Pixels = [];
+                        currSection.Words = [];
+
+                        let localRects = scene[k].PuzzleBoard;
+                        let localWords = scene[k].WordBoard;
+                        localRects.forEach(r => {
+                            currSection.Pixels.push({
+                                Letter: r.letter,
+                                Position: {
+                                    x: r.x,
+                                    y: r.y
+                                },
+                                Red: r.color.red,
+                                Blue: r.color.blue,
+                                Green: r.color.green
+                            });
+                        });
+                        // debugger;
+                        localWords.forEach(arr => {
+                            arr.forEach((w, index) => {
+                                currSection.Words.push({
+                                    Letter: w.letter,
+                                    Position: {
+                                        x: w.x,
+                                        y: w.y
+                                    },
+                                    Red: w.color.red,
+                                    Blue: w.color.blue,
+                                    Green: w.color.green,
+                                    Direction: w.direction,
+                                    Index: w.index
+                                })
+                                if (index === arr.length - 1) {
+                                    currSection.Words.push({
+                                        Letter: '$'
+
+                                    });
+                                }
+                            });
+
+                        });
+                    }
+
+                    let postObject = { sections: sections, name: $('#txtPuzzleName').val() };
+                    $.ajax({
+                        type: "POST",
+                        traditional: true,
+                        url: '/Data/SavePuzzle',
+                        data: JSON.stringify(postObject),
+                        datatype: "json",
+                        cache: false,
+                        contentType: 'application/json',
+                        success: function (result) {
+                            alert('Success!!');
+                            //add to the drop down
+
+                        }
+                    });
+                });
+                getPuzzleNames();
+                getSceneNames();
+                                    // getPixelsFromFile();
+            </script>
+</body>
+</html>

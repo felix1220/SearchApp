@@ -1,0 +1,519 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>WordGridPuzzle</title>
+</head>
+<body>
+    <div style="width:50%;float:left">
+        <canvas id="canvas" width="500" height="500" class="controlPanel"></canvas><br />
+
+
+    </div>
+    <script>
+        function BasicRect() {
+            return {
+                x: 10,
+                y: 10,
+                deltaX: 0,
+                deltaY: 0,
+                width: 12,
+                height: 12,
+                outline: false,
+                boundTo: -1,
+                letter: 'A',
+                offCenterX: 0,
+                offCenterY: 0,
+                direction: -1,
+                id:0,
+                font: 'bold 14px Courier',
+                box: {
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0
+                },
+                color: {
+                    red: 0,
+                    green: 0,
+                    blue: 0
+                },
+                rollBackRect: null
+            };
+        }
+
+         var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext("2d");
+        let grid = [];
+        let rect = new BasicRect();
+        grid.push({
+            ...rect,
+            letter: 'A',
+            x: 50,
+            y: 50,
+            id:1,
+            direction: 3,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'B',
+            id:2,
+            x: 62,
+            y: 50,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'C',
+            id:3,
+            x: 74,
+            y: 50,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'D',
+            id:4,
+            x: 86,
+            y: 50,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'E',
+            id:5,
+            x: 98,
+            y: 50,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            id:6,
+            letter: 'F',
+            x: 110,
+            y: 50,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'G',
+            id:7,
+            x: 122,
+            y: 50,
+            direction:6,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'H',
+            id:8,
+            x: 50,
+            y: 62,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'I',
+            id:9,
+            x: 62,
+            y: 62,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'J',
+            id:10,
+            x: 74,
+            y: 62,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'K',
+            id:11,
+            x: 86,
+            y: 62,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'L',
+            id:12,
+            x: 98,
+            y: 62,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'M',
+            id:13,
+            x: 110,
+            y: 62,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'N',
+            id:14,
+            x: 122,
+            y: 62,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'O',
+            id:15,
+            x: 50,
+            y: 74,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'P',
+            id:16,
+            x: 62,
+            y: 74,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'Q',
+            id:17,
+            x: 74,
+            y: 74,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'R',
+            id:18,
+            x: 86,
+            y: 74,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'S',
+            id:19,
+            x: 98,
+            y: 74,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'T',
+            id:20,
+            x: 110,
+            y: 74,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'U',
+            id:21,
+            x: 122,
+            y: 74,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'V',
+            id:22,
+            x: 50,
+            y: 86,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'W',
+            id:23,
+            x: 62,
+            y: 86
+        });
+        grid.push({
+            ...rect,
+            letter: 'X',
+            id:24,
+            x: 74,
+            y: 86,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'Y',
+            id:25,
+            x: 86,
+            y: 86,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'Z',
+            id:26,
+            x: 98,
+            y: 86,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'A',
+            id:27,
+            x: 110,
+            y: 86,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        grid.push({
+            ...rect,
+            letter: 'B',
+            id:28,
+            x: 122,
+            y: 86,
+            box: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
+            }
+        });
+        outLineRects = [];
+        grid.forEach(l => {
+            //if (l.direction === 3) {
+               //direction == 1
+               // l.box.top = 1;
+              //  l.box.left = 1;
+               // l.box.bottom = 1;
+
+                //direction == 2
+                //l.box.top = 1;
+                //l.box.left = 1;
+                //l.box.right = 1;
+
+               // direction == 3
+                //l.box.top = 1;
+                //l.box.left = 1;
+                //l.box.bottom = 1;
+                //outLineRects.push(l);
+            //}
+            if (l.direction === 6) {
+                l.box.top = 1;
+                l.box.right = 1;
+                l.box.bottom = 1;
+                outLineRects.push(l);
+            }
+            if (outLineRects.length > 0 && outLineRects[0].direction === 6) {
+                //direction == 1
+                /*if (l.id - 1 === outLineRects[0].id && l.y === outLineRects[0].y) {
+                    l.box.top = 1;
+                    l.box.bottom = 1;
+                    l.direction = 1;
+                    outLineRects[0] = l;
+                }*/
+                //direction == 2
+               /* if (l.x === outLineRects[0].x && l.id !== outLineRects[0].id) {
+
+                    l.box.right = 1;
+                    l.box.left = 1;
+                    l.direction = 2;
+                    outLineRects[0] = l;
+                } */
+                //direction == 3
+                //if (l.letter === "Y") {
+                //    l.box.top = 1;
+                //    l.box.right = 1;
+                //    l.box.bottom = 1;
+                //}
+                if (l.letter === "Y") {
+                    l.box.top = 1;
+                    l.box.left = 1;
+                    l.box.bottom = 1;
+                }
+            }
+        });
+        ctx.font = "bold 14px Courier";
+        ctx.beginPath();
+
+
+        grid.forEach(l => {
+            let startLeftX = l.x - 2;
+            let startY = l.y - l.height;
+            let endRightX = l.x + l.width - 2;
+            let endRightY = l.y + 2;
+            //if (l.letter === 'A') {
+            //    endRightX -= 3;
+            //}
+           // if (l.letter === 'Y') {
+               // startLeftX += 2;
+            //}
+            if (l.box.top) {
+                ctx.moveTo(startLeftX, startY);
+                ctx.lineTo(endRightX, startY);
+            }
+            if (l.box.left) {
+                ctx.moveTo(startLeftX, startY);
+                ctx.lineTo(startLeftX, endRightY);
+            }
+            if (l.box.right) {
+                ctx.moveTo(endRightX, startY);
+                ctx.lineTo(endRightX,endRightY);
+            }
+            if (l.box.bottom) {
+                ctx.moveTo(startLeftX, endRightY);
+                ctx.lineTo(endRightX , endRightY);
+            }
+            //if (l.letter === 'Y') {
+            //    ctx.moveTo(grid[0].x + (grid[0].width/2), grid[0].y - grid[0].height);
+            //    ctx.lineTo(startLeftX + 4, l.y - l.height);
+            //    ctx.moveTo(grid[0].x + (grid[0].width / 2), grid[0].y + 2);
+            //    ctx.lineTo(startLeftX + 4, l.y + 2);
+            //}
+            if (l.letter === 'Y') {
+                ctx.moveTo(grid[6].x, grid[6].y - grid[6].height);
+                ctx.lineTo(startLeftX + l.width - 2, l.y - l.height);
+                ctx.moveTo(grid[6].x + 4, grid[6].y);
+                ctx.lineTo(startLeftX + l.width, l.y + 2);
+            }
+            ctx.fillText(l.letter, l.x, l.y);
+            ctx.stroke();
+        });
+
+
+    </script>
+</body>
+</html>
