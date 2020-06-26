@@ -87,16 +87,22 @@
                
             };
             canvas.onmousemove = (evt) => {
-                var pt = getMousePos(evt);
+               
                 if ($('#chkMoveCanvas').is(":checked") && mouseIsDown) {
+                    const pt = getMousePos(evt);
                     let deltaX = pt.x - initialDown.x;
                     let deltaY = pt.y - initialDown.y;
                     initialDown = new Point2D(pt.x, pt.y);
                     updateRects(deltaX, deltaY);
+                    updateHighlightedWords();
+                    const rectData = scenesCollection.find(x => x.type === 'puzzleData').data;
                     loadLettersCanvas(rectData);
+
                 }
             };
             canvas.onmousedown = (e) => {
+                const currPos = getMousePos(e);
+                initialDown = new Point2D(currPos.x, currPos.y);
                 mouseIsDown = true;
             }
             $('#btnSavePuzzle').click(function () {
@@ -116,6 +122,25 @@
 
                 }
             });
+            const updateHighlightedWords = () => {
+                const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
+                const mod = scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
+                const plan = scenesCollection.find(x => x.type === 'puzzleData').data.Plan;
+                wordsCollection.forEach(w => {
+                    const { startRect, pickedRect } = stickOnPuzzle(w.Word, w.Direction, rectData, mod, w.ID);
+                    const { sideLeftPos, sideRightPos, topPoints, bottomPoints } = calcWordsOutline(plan.Font, w.Direction, plan.Spacing, startRect, pickedRect);
+                    w.LeftWall = sideLeftPos;
+                    w.RightWall = sideRightPos;
+                    w.TopWall = topPoints;
+                    w.BottomWall = bottomPoints;
+                });
+            }
+            const getMousePos = (evt) => {
+                var rect = canvas.getBoundingClientRect();
+
+                //return new vector2d(evt.clientX - rect.left,evt.clientY - rect.top,-1,-1);
+                return new Point2D(evt.clientX - rect.left, evt.clientY - rect.top);
+            }
             const updateRects = (deltaX, deltaY) => {
                 const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
                 rectData.forEach(rect => {
