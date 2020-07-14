@@ -692,12 +692,20 @@
                 fetchScenes.then(response => {
                     return response.json();
                 }).then(data => {
-
-                    scenesCollection.push({
-                        type: typeId,
-                        data: data
-                    });
-
+                    if (scenesCollection.length > 0) {
+                        scenesCollection[0] = {
+                            type: typeId,
+                            data: data
+                        }
+                    } else {
+                    
+                          scenesCollection.push({
+                              type: typeId,
+                              data: data
+                          });
+                         
+                    }
+                 
                     if (callBackFunc) {
                         callBackFunc(data);
                     }
