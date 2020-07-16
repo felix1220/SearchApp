@@ -113,7 +113,7 @@
             $("#txtCodes").keyup(function (event) {
                 if (event.keyCode === 13) {
                     console.log('Text Area =>', $('#txtCodes').val());
-                    parser($('#txtCodes').val());
+                    parser($('#txtCodes').val().trim().replace(/(\r\n|\n|\r)/gm, ""));
                     const rectData = scenesCollection.find(x => x.type === 'puzzleData').data;
                     loadLettersCanvas(rectData);
                     addWordsDom();
@@ -720,6 +720,7 @@
                     return;
                 }
                 var url = 'http://localhost:5233/Data/GetLoadedSceneJson/?fileName=' + $('#ddlSelectScene').val();
+                wordsCollection = [];
                 loadSceneData(url, 'sceneData', loadTxtComponent('txtPuzzleName'));
             });
 
