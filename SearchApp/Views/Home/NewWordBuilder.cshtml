@@ -58,6 +58,31 @@
             </div>
         </div>
         <div>
+            <div>
+                <hr />
+            </div>
+            <div>
+                <div>
+                    <b>ID:</b><input type="text" size="3" id="rectId"/>
+                </div>
+                <div>
+                    <b>Width:</b><input type="text" size="3" id="boxWidth"/>
+                </div>
+                <div>
+                    <b>Height:</b><input type="text" size="3" id="boxHeight"/>
+                </div>
+                <div>
+                    <textarea id="txtWords" rows="10" cols="30"></textarea>
+                </div>
+                <div>
+                    <button id="btnUpdatePuzzleWords">Update Puzzle</button>
+                </div>
+            </div>
+            <div>
+                <hr />
+            </div>
+        </div>
+        <div>
             <input type="checkbox" name="chkMoveCanvas" value="canvasMove" id="chkMoveCanvas" /> Move Canvas
         </div>
         <div>
@@ -109,7 +134,28 @@
                 postPuzzleData();
                // loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
             });
+            buildWordGrid = () => {
+                const mod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus + 1;
+                const startId = parseInt($('#rectId').val());
+                const boxWidth = parseInt($('#boxWidth').val());
+                const boxHeight = parseInt($('#boxHeight').val());
+                const wordsArr = $('#txtWords').val().split('\n');
+                //lets build an array of all ids in the box
+                const boxIds = [];
+                const heightDiff = startId - boxHeight;
+                let indexCol = 0;
+                let indexRow = 0;
+                while (indexCol < boxWidth) {
+                    while (indexRow < boxHeight) {
+                        boxIds.push(startId++);
+                        indexRow++;
+                    }
+                    indexCol++;
+                    indexRow = 0;
+                    startId += mod;
+                }
 
+            }
             $("#txtCodes").keyup(function (event) {
                 if (event.keyCode === 13) {
                     console.log('Text Area =>', $('#txtCodes').val());
@@ -500,6 +546,7 @@
                 let pickedIndx = pickedId;
                 const startRect = data.find(x => x.ID === pickedId);
                 let pickedRect = data.find(x => x.ID === pickedId);
+                const collectIndxs = [];
                 Array.prototype.forEach.call(word, (l, index) => {
                     pickedRect.Letter = l;
                     switch (direction) {
@@ -528,10 +575,12 @@
                             pickedIndx -= mod; //LD
                     }
 
-                    if(index < word.length - 1)
+                    if (index < word.length - 1) {
                         pickedRect = data.find(x => x.ID === pickedIndx);
+                        collectIndxs.push(pickedIndx);
+                    }
                 });
-                return { startRect, pickedRect };
+                return { startRect, pickedRect, collectIndxs };
             }
             const loadBackgroundImg = () => {
                 const img1 = new Image();
@@ -681,6 +730,7 @@
                     const url = 'http://localhost:5233/Data/GetLoadedScenePuzzle/?scenePuzzleName=' + $('#ddlSelectPuzzle').val();
                     sceneModel = serverData;
                     const justPuzzleName = serverData.PuzzleName.split('#')[1];
+                    $('#ddlSelectPuzzle').val(justPuzzleName);
                     const puzzleUrl = 'http://localhost:5233/Data/GetLoadedScenePuzzle/?scenePuzzleName=' + serverData.SceneName + '&puzzleName=' + justPuzzleName;
                     loadSceneData(puzzleUrl, 'puzzleData', wrapperReloadScene(serverData));
 
