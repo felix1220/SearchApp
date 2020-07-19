@@ -134,32 +134,82 @@
                 postPuzzleData();
                // loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
             });
+
             buildWordGrid = () => {
-                const mod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus + 1;
-                const startId = parseInt($('#rectId').val());
+                let mod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus + 1;
+                const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
+                const plan = scenesCollection.find(x => x.type === 'puzzleData').data.Plan;
+                let startId = parseInt($('#rectId').val());
                 const boxWidth = parseInt($('#boxWidth').val());
                 const boxHeight = parseInt($('#boxHeight').val());
-                const wordsArr = $('#txtWords').val().split('\n');
+                const wordsArr = $('#txtWords').val().toLocaleUpperCase().split('\n');
                 //lets build an array of all ids in the box
                 const boxIds = [];
-                const heightDiff = startId - boxHeight;
                 let indexCol = 0;
                 let indexRow = 0;
                 while (indexCol < boxWidth) {
-                    while (indexRow < boxHeight) {
-                        boxIds.push(startId++);
+                    let vertical = startId;
+                    while (indexRow < boxHeight) {  
+                        boxIds.push(vertical++);
                         indexRow++;
                     }
                     indexCol++;
                     indexRow = 0;
                     startId += mod;
                 }
-
+                const trials = 3;
+                
+                const placedOn = {};
+                const wordsNotPlaced = [];
+                const wordsPlaced = [];
+                mod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus
+                wordsArr.forEach(word => {
+                    let ticks = 0;
+                     while (ticks < trials) {
+                         const pickIndex = Math.floor((Math.random() * boxIds.length - 1));
+                         const pickId = boxIds[pickIndex];
+                          
+                         if (!placedOn[pickId] && !wordsPlaced.some(val => val === word)) {
+                                const pickDirection = Math.floor(Math.random() * (9 - 0) + 0);
+                                const { collectIndxs } = stickOnPuzzle(word, pickDirection, rectData, mod, pickId, false);
+                                let notFound = true;
+                                collectIndxs.forEach(id => {
+                                    if (placedOn[id]) notFound = false;
+                                });
+                                if (notFound) {
+                                    collectIndxs.forEach(id => placedOn[id] = 1);
+                                    placedOn[pickIndex] = 1;
+                                    const { startRect, pickedRect } = stickOnPuzzle(word, pickDirection, rectData, mod, pickId);
+                                    const { sideLeftPos, sideRightPos, topPoints, bottomPoints } = calcWordsOutline(plan.Font, pickDirection, plan.Spacing, startRect, pickedRect);
+                                        wordsCollection.push({
+                                            ID: pickId,
+                                            Word: word,
+                                            Direction: pickDirection,
+                                            LeftWall: sideLeftPos,
+                                            RightWall: sideRightPos,
+                                            TopWall: topPoints,
+                                            BottomWall: bottomPoints
+                                        });
+                                    wordsPlaced.push(word);
+                                }
+                            }
+                            ticks++;
+                    }
+                });
+               
+                console.log('Array of Ids =>' , boxIds);
             }
+            $('#btnUpdatePuzzleWords').click(function () {
+                buildWordGrid();
+                const rectData = scenesCollection.find(x => x.type === 'puzzleData').data;
+                loadLettersCanvas(rectData);
+                addWordsDom();
+            });
+
             $("#txtCodes").keyup(function (event) {
                 if (event.keyCode === 13) {
                     console.log('Text Area =>', $('#txtCodes').val());
-                    parser($('#txtCodes').val().trim().replace(/(\r\n|\n|\r)/gm, ""));
+                    parser($('#txtCodes').val());
                     const rectData = scenesCollection.find(x => x.type === 'puzzleData').data;
                     loadLettersCanvas(rectData);
                     addWordsDom();
@@ -308,6 +358,7 @@
                         const rectData = scenesCollection.find(x => x.type === 'puzzleData').data;
                         const mod = scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
                         const replaceWord = randWord(myId.Word.length, 0);
+                        console.log('Replace the word =>', replaceWord);
                         stickOnPuzzle(replaceWord, myId.Direction, rectData.AllLetters, mod, myId.ID);
                         loadLettersCanvas(rectData);
                         addWordsDom();
@@ -542,13 +593,15 @@
                 calcPoints();
                 return { sideLeftPos, sideRightPos, topPoints, bottomPoints };
             }
-            const stickOnPuzzle = (word, direction, data, mod, pickedId) => {
+            const stickOnPuzzle = (word, direction, data, mod, pickedId, stickIt= true) => {
                 let pickedIndx = pickedId;
                 const startRect = data.find(x => x.ID === pickedId);
                 let pickedRect = data.find(x => x.ID === pickedId);
                 const collectIndxs = [];
                 Array.prototype.forEach.call(word, (l, index) => {
-                    pickedRect.Letter = l;
+                    if (stickIt)
+                        pickedRect.Letter = l;
+
                     switch (direction) {
                         case 0:
                             pickedIndx -= 1; //U
@@ -619,8 +672,8 @@
                 });
             }
             const parser = (txtCommands) => {
-                txtCommands = txtCommands.replace(/[\n\r]+/g, '');
-                const rectArr = txtCommands.split(' ');
+               // txtCommands = txtCommands.replace(/[\n\r]+/g, '');
+                const rectArr = txtCommands.split('\n').filter( val => val !== '');
                 const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
                 const plan = scenesCollection.find(x => x.type === 'puzzleData').data.Plan;
                 let foundRect = null;
