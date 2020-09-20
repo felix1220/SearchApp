@@ -63,6 +63,19 @@
             </div>
             <div>
                 <div>
+                    <b>Load Words:</b>
+                    <select id="ddlSelectSceneWords">
+                        <option value="">--Select Scene--</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div>
+                <hr />
+            </div>
+            <div>
+                <div>
                     <b>ID:</b><input type="text" size="3" id="rectId"/>
                 </div>
                 <div>
@@ -259,6 +272,7 @@
             const postPuzzleData = async () => {
                 const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
                 const sceneData = scenesCollection.find(x => x.type === 'sceneData')?.data;
+                const mod = scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
                 const newWordArr = wordsCollection.map(item => {
                     return {
                         Word: item.Word,
@@ -270,7 +284,8 @@
                 const puzzleBody = {
                     SceneName: $('#txtPuzzleName').val(),
                     PuzzleName: $('#txtPuzzleName').val() + '#' + realPuzzleName,
-                    Words: newWordArr
+                    Words: newWordArr,
+                    Mod: mod
                 };
                 let postObject = { pixels: rectData, name: $('#txtPuzzleName').val() + '#' + realPuzzleName };
                 const config = {
@@ -350,13 +365,14 @@
                     $spanImg.append($img);
                     $img.click(function () {
                         const myId = closureId();
-                        
+                        console.log('Closure ID => ', myId);
                         const matchPos = wordsCollection.findIndex(word => word.ID === myId.ID);
                         
                         wordsCollection.splice(matchPos, 1);
 
                         const rectData = scenesCollection.find(x => x.type === 'puzzleData').data;
                         const mod = scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
+                        console.log('The Old Word => ', myId.Word);
                         const replaceWord = randWord(myId.Word.length, 0);
                         console.log('Replace the word =>', replaceWord);
                         stickOnPuzzle(replaceWord, myId.Direction, rectData.AllLetters, mod, myId.ID);
@@ -765,9 +781,47 @@
                     serverData.forEach(s => {
                         selectScene.append($('<option></option>').val(s).html(s));
                     });
+                    if (uiId === 'ddlSelectScene') {
+                        selectScene = $('#' + uiId + 'Words');
+                        serverData.forEach(s => {
+                            selectScene.append($('<option></option>').val(s).html(s));
+                        });
+                    }
+
                 }
                 
             }
+            const loadWordsFromJson = () => {
+                return (sceneData) => {
+                    const wordsLs = sceneData.Words;
+                    const originMod = +sceneData.Mod;
+                    const currMod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
+                    const rectData = scenesCollection.find(x => x.type === 'puzzleData').data;
+                    const plan = scenesCollection.find(x => x.type === 'puzzleData').data.Plan;
+                    wordsLs.forEach(theWord => {
+                        // debugger;
+                        const position = Math.floor(theWord.ID / originMod);
+                        const diff = theWord.ID - (position * originMod);
+                        const newID = position * currMod + diff;
+
+                        const { startRect, pickedRect } = stickOnPuzzle(theWord.Word, theWord.Direction, rectData.AllLetters, currMod, newID);
+                        const { sideLeftPos, sideRightPos, topPoints, bottomPoints } = calcWordsOutline(plan.Font, theWord.Direction, plan.Spacing, startRect, pickedRect);
+                        wordsCollection.push({
+                            ID: newID,
+                            Word: theWord.Word,
+                            Direction: theWord.Direction,
+                            LeftWall: sideLeftPos,
+                            RightWall: sideRightPos,
+                            TopWall: topPoints,
+                            BottomWall: bottomPoints
+                        });
+                    });
+                     loadLettersCanvas(rectData);
+                     addWordsDom();
+
+                }
+            }
+
             const wrapperReloadScene = (sceneData) => {
                 return (puzzleData) => {
                     loadLettersCanvas(puzzleData);
@@ -795,18 +849,20 @@
                 fetchScenes.then(response => {
                     return response.json();
                 }).then(data => {
-                    if (scenesCollection.length > 0) {
-                        scenesCollection[0] = {
-                            type: typeId,
-                            data: data
+                    if (typeId) {
+                        if (scenesCollection.length > 0) {
+                            scenesCollection[0] = {
+                                type: typeId,
+                                data: data
+                            }
+                        } else {
+
+                            scenesCollection.push({
+                                type: typeId,
+                                data: data
+                            });
+
                         }
-                    } else {
-                    
-                          scenesCollection.push({
-                              type: typeId,
-                              data: data
-                          });
-                         
                     }
                  
                     if (callBackFunc) {
@@ -817,7 +873,15 @@
                 });
 
             }
-           
+            $('#ddlSelectSceneWords').on('change', () => {
+                if ($('#ddlSelectSceneWords').val() === '') {
+                    return;
+                }
+                var url = 'http://localhost:5233/Data/GetLoadedSceneJson/?fileName=' + $('#ddlSelectSceneWords').val();
+                wordsCollection = [];
+                loadSceneData(url, '', loadWordsFromJson());
+
+            });
             $('#ddlSelectScene').on('change', () => {
                 if ($('#ddlSelectScene').val() === '') {
                     return;

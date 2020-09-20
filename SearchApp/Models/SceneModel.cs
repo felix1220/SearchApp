@@ -10,5 +10,7 @@ namespace SearchApp.Models
         public string SceneName { get; set; }
         public string PuzzleName { get; set; }
         public List<WordModel> Words { get; set; }
+
+        public string Mod { get; set; }
     }
 }
