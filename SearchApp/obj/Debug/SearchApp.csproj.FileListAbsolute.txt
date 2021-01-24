@@ -74,7 +74,6 @@ C:\projects\SearchApp\SearchApp\bin\System.Diagnostics.DiagnosticSource.xml
 C:\projects\SearchApp\SearchApp\bin\Microsoft.AspNet.TelemetryCorrelation.xml
 C:\projects\SearchApp\SearchApp\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.xml
 C:\projects\SearchApp\SearchApp\obj\Debug\SearchApp.csprojAssemblyReference.cache
-C:\projects\SearchApp\SearchApp\obj\Debug\SearchApp.csproj.CoreCompileInputs.cache
 C:\projects\SearchApp\SearchApp\obj\Debug\SearchApp.csproj.CopyComplete
 C:\projects\SearchApp\SearchApp\obj\Debug\SearchApp.dll
 C:\projects\SearchApp\SearchApp\obj\Debug\SearchApp.pdb
