@@ -677,6 +677,11 @@ namespace SearchApp.Controllers
                         {
                             x = Convert.ToInt32(pixelArr[1]),
                             y = Convert.ToInt32(pixelArr[2])
+                        },
+                        OriginalPosition = new PositionModel
+                        {
+                            x = Convert.ToInt32(pixelArr[1]),
+                            y = Convert.ToInt32(pixelArr[2])
                         }
                     });
                     index++;

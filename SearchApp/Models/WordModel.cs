@@ -10,5 +10,7 @@ namespace SearchApp.Models
         public string Word { get; set; }
         public int Direction { get; set; }
         public int ID { get; set; }
+
+        public List<PositionModel> Positions { get; set; }
     }
 }

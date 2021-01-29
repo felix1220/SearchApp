@@ -20,5 +20,7 @@ namespace SearchApp.Models
         public string Letter { get; set; }
         public int? Direction { get; set; }
         public int? Index { get; set; }
+
+        public PositionModel OriginalPosition { get; set; }
     }
 }
