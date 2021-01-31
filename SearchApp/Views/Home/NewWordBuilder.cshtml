@@ -178,6 +178,8 @@
                 mod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus
                 wordsArr.forEach(word => {
                     let ticks = 0;
+                    copyCollectIndex = [];
+
                      while (ticks < trials) {
                          const pickIndex = Math.floor((Math.random() * boxIds.length - 1));
                          const pickId = boxIds[pickIndex];
@@ -185,13 +187,15 @@
                          if (!placedOn[pickId] && !wordsPlaced.some(val => val === word)) {
                                 const pickDirection = Math.floor(Math.random() * (9 - 0) + 0);
                                 const { collectIndxs } = stickOnPuzzle(word, pickDirection, rectData, mod, pickId, false);
-                                let notFound = true;
+                             // debugger;
+                             let notFound = true;
                                 collectIndxs.forEach(id => {
                                     if (placedOn[id]) notFound = false;
                                 });
+                             copyCollectIndex = collectIndxs;
                              if (notFound) {
                                     positions = [];
-                                    collectIndxs.forEach(id => placedOn[id] = 1);
+                                    copyCollectIndex.forEach(id => placedOn[id] = 1);
                                     placedOn[pickIndex] = 1;
                                     const { startRect, pickedRect, collectIndxs } = stickOnPuzzle(word, pickDirection, rectData, mod, pickId);
                                  const { sideLeftPos, sideRightPos, topPoints, bottomPoints } = calcWordsOutline(plan.Font, pickDirection, plan.Spacing, startRect, pickedRect);
@@ -359,12 +363,27 @@
                     }
                 });
             }
+            const pullIDs = (word) => {
+                collector = [];
+                const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
+                collector.push(word.ID);
+                word.AllWordLocations.forEach(p => {
+                    const r = rectData.find(f => f.Position.x === p.x && f.Position.y === p.y);
+                    if (r) {
+                        collector.push(r.ID);
+                    }
+                });
+                return collector;
+            }
+
             const addWordsDom = () => {
                 $('#wordsList').empty();
                 wordsCollection.forEach(wordItem => {
                     const $spanImg = $('<span style="margin-left:5px;" />');
                     const $spanWordTxt = $('<span>' + wordItem.Word + ',</span>');
-                    const $spanIDTxt = $('<span>' + wordItem.ID + ',</span>');
+                    const allIds = pullIDs(wordItem);
+                    const rectIds = allIds.join(', ');
+                    const $spanIDTxt = $('<span style="font-size:9px">' + rectIds + ',</span>');
                     const $spanDirectionTxt = $('<span>' + wordItem.Direction + ',</span>');
                     const $img = $('<img />');
                     const closureId = () => wordItem;
@@ -833,9 +852,9 @@
 
                         const { startRect, pickedRect, collectIndxs } = stickOnPuzzle(theWord.Word, theWord.Direction, rectData.AllLetters, currMod, newID);
                         const { sideLeftPos, sideRightPos, topPoints, bottomPoints } = calcWordsOutline(plan.Font, theWord.Direction, plan.Spacing, startRect, pickedRect);
-                        collectIndxs.forEach(id => {
+                        /*collectIndxs.forEach(id => {
                             positions.push(retreivePos(id, rectData));
-                        })
+                        })*/
                         wordsCollection.push({
                             ID: newID,
                             Word: theWord.Word,
@@ -844,7 +863,7 @@
                             RightWall: sideRightPos,
                             TopWall: topPoints,
                             BottomWall: bottomPoints,
-                            AllWordLocations: positions
+                            AllWordLocations: theWord.Positions
                         });
                     });
                      loadLettersCanvas(rectData);
