@@ -50,5 +50,9 @@ namespace SearchApp.Controllers
         {
             return View();
         }
+        public ActionResult PastMap()
+        {
+            return View();
+        }
     }
 }
