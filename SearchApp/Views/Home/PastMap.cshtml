@@ -35,28 +35,29 @@
                     <input type="radio" id="any" name="options" value="any">
                     <label for="other">Any</label>
                 </div>
-            </div><br/>
+            </div><br />
             <div>
                 <div>
                     <textarea id="txtWords" rows="10" cols="30"></textarea>
                 </div>
-            </div><br/>
-          </div>
-      </div>
+            </div><br />
+        </div>
+    </div>
     <script>
         let scenesCollection = [];
         let wordsCollection = [];
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext("2d");
-        const collision = (data, words, spotIndx) => {
-            words.forEach(w => {
-                const letterIds = w.Poisitions.map(p => {
-                    const item = data.find(d => d.Position.x === p.Positions.x && d.Position.y === p.Positions.y);
-                    return item.ID;
-                });
-                const letterId = letterIds.find(l => l === spotIndx);
-                return (letterId) ? true: false;
+        const collision = (data, word, myWord) => {
+
+            const letterIds = word.Positions.map(p => {
+                const item = data.find(d => d.Position.x === p.x && d.Position.y === p.y);
+                return item.ID;
             });
+
+            const filteredArray = letterIds.filter(value => myWord.includes(value));
+            return filteredArray && filteredArray.length;
+
             return false;
         }
         const algoAlign = (data, words) => {
@@ -73,59 +74,106 @@
 
             }
         }
-             const loadLettersCanvas = (data) => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.beginPath();
-                ctx.save();
-                data.AllLetters.forEach((rect) => {
-                    if (rect.IsVisible) {
-                        let strRgb = `rgba(${rect.BackgroundRed},${rect.BackgroundGreen},${rect.BackgroundBlue},1.0)`;
-                        
-                            ctx.fillStyle = strRgb;
-                            let newY = rect.Position.y - data.Plan.Font;
-                            const width = data.Plan.Font;
-                            const height = data.Plan.Font;
-                            ctx.fillRect(rect.Position.x, newY, width, height);
-                            // ctx.stroke();
+        const loadLettersCanvas = (data) => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.save();
+            data.AllLetters.forEach((rect) => {
+                if (rect.IsVisible) {
+                    let strRgb = `rgba(${rect.BackgroundRed},${rect.BackgroundGreen},${rect.BackgroundBlue},1.0)`;
 
-                        if (rect.Outline) {
-                            // console.log(rect.letter, i);
-                            let block = data.Plan.Font + data.Plan.Spacing;
-                            ctx.rect(rect.Position.x, rect.Position.y - block, width, height);
-                        }
+                    ctx.fillStyle = strRgb;
+                    let newY = rect.Position.y - data.Plan.Font;
+                    const width = data.Plan.Font;
+                    const height = data.Plan.Font;
+                    ctx.fillRect(rect.Position.x, newY, width, height);
+                    // ctx.stroke();
 
-                        strRgb = `rgba(${rect.Red},${rect.Green},${rect.Blue},1.0)`;
-                        ctx.font = data.Plan.Style;
-                        ctx.fillStyle = strRgb;
-                        ctx.fillText(rect.Letter, rect.Position.x, rect.Position.y);
-                        ctx.stroke();
-                        // console.log(strRgb);
+                    if (rect.Outline) {
+                        // console.log(rect.letter, i);
+                        let block = data.Plan.Font + data.Plan.Spacing;
+                        ctx.rect(rect.Position.x, rect.Position.y - block, width, height);
                     }
-                });
-                // highlightWords();
-                ctx.restore();
+
+                    strRgb = `rgba(${rect.Red},${rect.Green},${rect.Blue},1.0)`;
+                    ctx.font = data.Plan.Style;
+                    ctx.fillStyle = strRgb;
+                    ctx.fillText(rect.Letter, rect.Position.x, rect.Position.y);
+                    ctx.stroke();
+                    // console.log(strRgb);
+                }
+            });
+            // highlightWords();
+            ctx.restore();
         }
 
-         $('#ddlSelectScene').on('change', () => {
-                if ($('#ddlSelectScene').val() === '') {
-                    return;
-                }
-                var url = 'http://localhost:5233/Data/GetLoadedSceneJson/?fileName=' + $('#ddlSelectScene').val();
-                wordsCollection = [];
-                loadSceneData(url, 'sceneData', loadTxtComponent('txtPuzzleName'));
-         });
-        const test = (data,mod, myWord) => {
-            const randPos = 232;
-            const randDir = 7;
-            const allIds = [];
+        $('#ddlSelectScene').on('change', () => {
+            if ($('#ddlSelectScene').val() === '') {
+                return;
+            }
+            var url = 'http://localhost:5233/Data/GetLoadedSceneJson/?fileName=' + $('#ddlSelectScene').val();
+            wordsCollection = [];
+            loadSceneData(url, 'sceneData', loadTxtComponent('txtPuzzleName'));
+        });
+        const test = (data, mod, myWord, words) => {
+            // debugger;
+            let randPos = 828;
+            const randDir = 2;
+            let allIds = [];
             allIds.push(randPos);
             const pos = data[randPos].Position;
-            if (randDir === 7) {
+            if (randDir === 2) {
                 for (let i = 0; i < myWord.length; i++) {
-                    randPos = randPos + mod;
+                    randPos = randPos + mod + 1;
                     allIds.push(randPos)
                 }
             }
+            const collectedIds = [];
+            let doubleCollision = false;
+            words.forEach(w => {
+                allIds = collectedIds.length ? collectedIds : allIds
+                if (collision(data, w, allIds)) {
+                    if (collectedIds.length) {
+                        doubleCollision = true;
+                        return;
+                    }
+                    const lowerCaseWord = w.Word.toLocaleLowerCase();
+                    //const letterInCommon = lowerCaseWord.filter(value => myWord.includes(value));
+                    let letterInCommon = '';
+                    for (let i = 0; i < lowerCaseWord.length; i++) {
+                        if (myWord.indexOf(lowerCaseWord[i]) > -1) {
+                            letterInCommon = lowerCaseWord[i];
+                            break;
+                        }
+                    }
+                    if (letterInCommon) {
+                        const existingIndex = w.Word.findIndex(f => f === letterInCommon);
+                        const newIndex = myWord.findIndex(f => f === letterInCommon);
+                        let startIndex = newIndex - 0;
+                        const letterIds = word.Positions.map(p => {
+                            const item = data.find(d => d.Position.x === p.x && d.Position.y === p.y);
+                            return item.ID;
+                        });
+
+                        let startingId = letterIds[existingIndex];
+                        if (randDir == 2) {
+                            if (startIndex > 0) {
+                                let iter = 0;
+                                while (iter < startIndex) {
+                                    startingId -= mod + 1;
+                                    iter++;
+                                }
+                            }
+                            Array.prototype.forEach.call(myWord, (l, index) => {
+                                startingId += mod + 1;
+                                collectedIds.push(startingId);
+                            });
+                        }
+
+                    }
+                }
+            });
+            //translate to text to paste on other screen
         }
         const wordSpec = (words) => {
             words.forEach(word => {
@@ -138,66 +186,67 @@
                 console.log('Word Obj => ', word.Word, word.Direction, accrue);
             });
         }
-         const wrapperReloadScene = (sceneData) => {
-                return (puzzleData) => {
-                    loadLettersCanvas(puzzleData);
-                    wordSpec(sceneData.Words);
-                   // addWordsDom();
-                   // highlightWords();
-                }
-              
+        const wrapperReloadScene = (sceneData) => {
+            return (puzzleData) => {
+                loadLettersCanvas(puzzleData);
+                test(puzzleData.AllLetters, +sceneData.Mod, 'ring', sceneData.Words);
+                // wordSpec(sceneData.Words);
+                // addWordsDom();
+                // highlightWords();
             }
-         const loadTxtComponent = (uiId) => {
-                return (serverData) => {
-                    $('#' + uiId).val(serverData.SceneName);
-                   
-                    sceneModel = serverData;
-                    const justPuzzleName = serverData.PuzzleName.split('#')[1];
-                    const puzzleUrl = 'http://localhost:5233/Data/GetLoadedScenePuzzle/?scenePuzzleName=' + serverData.SceneName + '&puzzleName=' + justPuzzleName;
-                    loadSceneData(puzzleUrl, 'puzzleData', wrapperReloadScene(serverData));
 
-                }
-            }
-          const loadDDLComponent = (uiId) => {
-                return (serverData) => {
-                    let selectScene = $('#' + uiId);
-                    serverData.forEach(s => {
-                        selectScene.append($('<option></option>').val(s).html(s));
-                    });
-
-                }
-                
         }
-          const loadSceneData = (endPt, typeId, callBackFunc)=> {
-                const fetchScenes = fetch(endPt);
-                fetchScenes.then(response => {
-                    return response.json();
-                }).then(data => {
-                    if (typeId) {
-                        if (scenesCollection.length > 0) {
-                            scenesCollection[0] = {
-                                type: typeId,
-                                data: data
-                            }
-                        } else {
+        const loadTxtComponent = (uiId) => {
+            return (serverData) => {
+                $('#' + uiId).val(serverData.SceneName);
 
-                            scenesCollection.push({
-                                type: typeId,
-                                data: data
-                            });
+                sceneModel = serverData;
+                const justPuzzleName = serverData.PuzzleName.split('#')[1];
+                const puzzleUrl = 'http://localhost:5233/Data/GetLoadedScenePuzzle/?scenePuzzleName=' + serverData.SceneName + '&puzzleName=' + justPuzzleName;
+                loadSceneData(puzzleUrl, 'puzzleData', wrapperReloadScene(serverData));
 
-                        }
-                    }
-                 
-                    if (callBackFunc) {
-                        callBackFunc(data);
-                    }
-                      
-
+            }
+        }
+        const loadDDLComponent = (uiId) => {
+            return (serverData) => {
+                let selectScene = $('#' + uiId);
+                serverData.forEach(s => {
+                    selectScene.append($('<option></option>').val(s).html(s));
                 });
 
+            }
+
         }
-          loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
+        const loadSceneData = (endPt, typeId, callBackFunc) => {
+            const fetchScenes = fetch(endPt);
+            fetchScenes.then(response => {
+                return response.json();
+            }).then(data => {
+                if (typeId) {
+                    if (scenesCollection.length > 0) {
+                        scenesCollection[0] = {
+                            type: typeId,
+                            data: data
+                        }
+                    } else {
+
+                        scenesCollection.push({
+                            type: typeId,
+                            data: data
+                        });
+
+                    }
+                }
+
+                if (callBackFunc) {
+                    callBackFunc(data);
+                }
+
+
+            });
+
+        }
+        loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
     </script>
 </body>
 </html>
