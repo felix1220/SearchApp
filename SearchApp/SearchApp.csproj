@@ -188,6 +188,7 @@
     <Content Include="Views\Home\PuzzleViewer.cshtml" />
     <Content Include="Views\Home\NewWordBuilder.cshtml" />
     <Content Include="Views\Home\PastMap.cshtml" />
+    <Content Include="Views\Home\PlotColors.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
