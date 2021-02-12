@@ -1,0 +1,240 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.5.0/d3.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+
+    <title>PlotColors</title>
+</head>
+<body>
+    <div>
+        <!--
+    <div id="tester" style="width:100%;height:500px;"></div>
+    <svg width="700" height="600"></svg>
+    -->
+        <table id="table1">
+            <thead>
+                <tr>
+                    <th>RGB</th>
+                    <th>Amount</th>
+                    <th>Color</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+    <script>
+        const mapper = {};
+        const loadGraph = () => {
+            TESTER = document.getElementById('tester');
+            Plotly.newPlot(TESTER, [{
+                x: [1, 2, 3, 4, 5],
+                y: [1, 2, 4, 8, 16]
+            }], {
+                margin: { t: 0 }
+            });
+        }
+        const loadD3 = () => {
+            const xData = [];
+            const yData = [];
+            for (const key in mapper) {
+                if (mapper.hasOwnProperty(key)) {
+                    // console.log(arr_jq_TabContents[key]);
+                    xData.push(key);
+                    yData.push(mapper[key]);
+                }
+
+            }
+            const svg = d3.select("svg"),
+                margin = 25,
+                width = svg.attr("width") - margin,
+                height = svg.attr("height") - margin;
+
+            const xScale = d3.scaleBand().range([0, width]).padding(0.4),
+                yScale = d3.scaleLinear().range([height, 0]);
+
+            const g = svg.append("g")
+                .attr("transform", "translate(" + 50 + "," + 50 + ")");
+
+            xScale.domain(xData);
+            yScale.domain([0, d3.max(yData, function (d) { return d.value; })]);
+
+            g.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(xScale));
+
+            g.append("g")
+                .call(d3.axisLeft(yScale).tickFormat(function (d) {
+                    return "$" + d;
+                }).ticks(10))
+                .append("text")
+                .attr("y", 6)
+                .attr("dy", "0.71em")
+                .attr("text-anchor", "end")
+                .text("value");
+        }
+        const histo = () => {
+            TESTER = document.getElementById('tester');
+            var randomNumber1 = [];
+            var randomNumber2 = [];
+            var randomNumber3 = [];
+            var randomNumber4 = [];
+
+            for (var i = 0; i < 500; i++) {
+                r = Math.random();
+                randomNumber1.push(r * 3);
+                randomNumber2.push(r * 6);
+                randomNumber3.push(r);
+                randomNumber4.push(r * 2);
+            }
+
+            var trace1 = {
+                x: randomNumber1,
+                y: randomNumber2,
+                type: 'histogram',
+                opacity: 0.5,
+                marker: {
+                    color: 'red',
+                },
+                xbins: {
+                    end: 5,
+                    size: 0.05,
+                    start: -3.2,
+                },
+            };
+
+            var trace2 = {
+                x: randomNumber3,
+                y: randomNumber4,
+                type: 'histogram',
+                opacity: 0.7,
+                marker: {
+                    color: 'blue',
+                },
+                xbins: {
+                    end: 3,
+                    size: 0.05,
+                    start: -2,
+                },
+            };
+
+            var data = [trace1, trace2];
+
+            var layout = { barmode: "overlay" };
+
+            Plotly.newPlot(TESTER, data, layout);
+        }
+        const getPosition = (string, subString, index) => {
+            return string.split(subString, index).join(subString).length;
+        }
+        const colorHisto = () => {
+            const xData = [];
+            const yData = [];
+            for (const key in mapper) {
+                if (mapper.hasOwnProperty(key)) {
+                    // console.log(arr_jq_TabContents[key]);
+                    xData.push(key + '');
+                    yData.push(mapper[key]);
+                }
+                    
+            }
+            TESTER = document.getElementById('tester');
+            const trace1 = {
+                x: xData,
+                y: yData,
+                type: 'bar',
+                marker: {
+                    color: 'red',
+                }
+            };
+            var data = [trace1];
+
+            var layout = {
+                title: 'Color Buckets',
+                font: {
+                    family: 'Raleway, sans-serif'
+                },
+                bargap: 0.05
+            };
+
+            Plotly.newPlot(TESTER, data, layout);
+        }
+        const parse = (data) => {
+            const pixels = data.raw.split(' ')
+            pixels.forEach(p => {
+                const indx = getPosition(p, ',', 3);
+                // debugger;
+                // const justColor = p.substr(indx+1, p.length - indx);
+                const pixelArr = p.split(',');
+                const justColor = pixelArr[3] + ',' + pixelArr[4] + ',' + pixelArr[5];
+                if (mapper[justColor]) {
+                    mapper[justColor] = mapper[justColor] + 1
+                } else {
+                    mapper[justColor] = 1;
+                }
+            })
+        }
+        const loadTable = () => {
+            jsonArr = [];
+            for (const key in mapper) {
+                if (mapper.hasOwnProperty(key)) {
+                    // console.log(arr_jq_TabContents[key]);
+                    jsonArr.push({
+                        rgb: key,
+                        amount: mapper[key],
+                        color: ''
+                    });
+                }
+
+            }
+            $('#table1').DataTable({
+                data: jsonArr,
+                columns: [
+                    { data: 'rgb' },
+                    { data: 'amount' },
+                    { data: 'color' }
+                ],
+                "pageLength": 1000
+            });
+        }
+        const fetchScene = (url) => {
+            const fetchScenes = fetch(url);
+            fetchScenes.then(response => {
+                return response.json();
+            }).then(data => {
+                parse(data);
+                console.log('The data => ', mapper);
+                // loadD3();
+                loadTable();
+            });
+        }
+        const getUrlParameter = (name) => {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&]*)');
+            var results = regex.exec(location.search);
+           
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+        const loadData = () => {
+            const scene = getUrlParameter('scene');
+           
+            if (scene) {
+                const url = 'http://localhost:5233/Data/GetSceneData/?name=' + scene;
+                fetchScene(url);
+            }
+            
+           
+        }
+        // histo();
+        loadData();
+    </script>
+</body>
+</html>

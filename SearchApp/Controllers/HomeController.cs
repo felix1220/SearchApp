@@ -50,5 +50,13 @@ namespace SearchApp.Controllers
         {
             return View();
         }
+        public ActionResult PlotColors()
+        {
+            return View();
+        }
+        public ActionResult PasteMapper()
+        {
+            return View();
+        }
     }
 }

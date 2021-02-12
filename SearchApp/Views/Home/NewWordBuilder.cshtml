@@ -11,6 +11,7 @@
     <title>NewWordBuilder</title>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.core.min.js"></script>
+   
     <style>
 
         .controlPanel {
@@ -21,13 +22,14 @@
             -moz-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
             box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
         }
+
         #wordsList {
             height: 300px;
             overflow: auto;
         }
     </style>
 
-    </head>
+</head>
 <body>
     <div style="width:50%;float:left">
         <canvas id="canvas" width="500" height="500" class="controlPanel"> </canvas>
@@ -105,6 +107,7 @@
 
         </div>
     </div>
+    
         <script>
             const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext("2d");
@@ -113,6 +116,7 @@
             let sceneModel = null;
             let mouseIsDown = false;
 
+          
             const Point2D = function (x, y) {
                 return {
                     x: x,
