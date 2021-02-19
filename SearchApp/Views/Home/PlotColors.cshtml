@@ -18,9 +18,15 @@
 <body>
     <div>
         <!--
+<<<<<<< HEAD
     <div id="tester" style="width:100%;height:500px;"></div>
     <svg width="700" height="600"></svg>
     -->
+=======
+        <div id="tester" style="width:100%;height:500px;"></div>
+        <svg width="700" height="600"></svg>
+        -->
+>>>>>>> 38f69e1cef27bdcc82df6c214e4b73bdb66f4e43
         <table id="table1">
             <thead>
                 <tr>
@@ -144,7 +150,11 @@
                     xData.push(key + '');
                     yData.push(mapper[key]);
                 }
+<<<<<<< HEAD
                     
+=======
+
+>>>>>>> 38f69e1cef27bdcc82df6c214e4b73bdb66f4e43
             }
             TESTER = document.getElementById('tester');
             const trace1 = {
@@ -220,18 +230,31 @@
             name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
             var regex = new RegExp('[\\?&]' + name + '=([^&]*)');
             var results = regex.exec(location.search);
+<<<<<<< HEAD
            
+=======
+
+>>>>>>> 38f69e1cef27bdcc82df6c214e4b73bdb66f4e43
             return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
         }
         const loadData = () => {
             const scene = getUrlParameter('scene');
+<<<<<<< HEAD
            
+=======
+
+>>>>>>> 38f69e1cef27bdcc82df6c214e4b73bdb66f4e43
             if (scene) {
                 const url = 'http://localhost:5233/Data/GetSceneData/?name=' + scene;
                 fetchScene(url);
             }
+<<<<<<< HEAD
             
            
+=======
+
+
+>>>>>>> 38f69e1cef27bdcc82df6c214e4b73bdb66f4e43
         }
         // histo();
         loadData();
