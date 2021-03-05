@@ -187,8 +187,13 @@
     <Content Include="Views\Home\AntPuzzle.cshtml" />
     <Content Include="Views\Home\PuzzleViewer.cshtml" />
     <Content Include="Views\Home\NewWordBuilder.cshtml" />
+<<<<<<< HEAD
+    <Content Include="Views\Home\PlotColors.cshtml" />
+    <Content Include="Views\Home\PasteMapper.cshtml" />
+=======
     <Content Include="Views\Home\PastMap.cshtml" />
     <Content Include="Views\Home\PlotColors.cshtml" />
+>>>>>>> 38f69e1cef27bdcc82df6c214e4b73bdb66f4e43
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

@@ -107,7 +107,21 @@ namespace SearchApp.Controllers
                 return jsonResult;
             }
         }
-
+        [HttpGet]
+        public ActionResult GetSceneData(string name)
+        {
+            string folderPath = @"C:\projects\Go\imgprocessing\puzzle_boards\" + name.Replace(":","#") + ".txt";
+            using (StreamReader rd = new StreamReader(folderPath))
+            {
+                var getData = new
+                {
+                    raw = rd.ReadToEnd()
+                };
+                var jsonResult = Json(getData, JsonRequestBehavior.AllowGet);
+                jsonResult.MaxJsonLength = int.MaxValue;
+                return jsonResult;
+            }
+        }
         [HttpGet]
         public ActionResult GetLoadedScenePuzzle(SceneRequestModel scene)
         {
