@@ -41,6 +41,9 @@
                     <textarea id="txtWords" rows="10" cols="30"></textarea>
                 </div>
             </div><br />
+            <div>
+                <button id="btnMatch">Match!</button>
+            </div>
             <div id="listResults">
 
             </div>
@@ -52,16 +55,16 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext("2d");
         const collision = (data, word, myWord) => {
-
+          
             const letterIds = word.Positions.map(p => {
                 const item = data.find(d => d.Position.x === p.x && d.Position.y === p.y);
+                // const items = data.filter(d => d.Position.x === p.x && d.Position.y === p.y);
+                // console.log('Should be just one => ', items);
                 return item.ID;
             });
 
             const filteredArray = letterIds.filter(value => myWord.includes(value));
             return filteredArray && filteredArray.length;
-
-            return false;
         }
         const algoAlign = (data, words) => {
             const val = $('input[name="options"]:checked').val();
@@ -118,22 +121,35 @@
             wordsCollection = [];
             loadSceneData(url, 'sceneData', loadTxtComponent('txtPuzzleName'));
         });
-        const buildIds = (myWord, startingId, dir) => {
+        const buildIds = (myWord, startingId, dir, mod) => {
             const collectedIds = [];
-            Array.prototype.forEach.call(myWord, (l, index) => {
-                if (dir === 2) {
-                    startingId += mod + 1;
+            collectedIds.push(startingId);
+            const data = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
 
-                } else if (dir === 0) {
-                    startingId -= 1;
-                } else if (dir === 1) {
-                    startIndex += mod;
-                } else if (dir === 2) {
-                    startIndex += mod + 1;
-                } else if (dir === 3) {
-                    startIndex += mod + 2;
+            Array.prototype.forEach.call(myWord, (l, index) => {
+                if (index > 0) {
+                    if (dir === 2) {
+                        startingId += mod + 1;
+
+                    } else if (dir === 0) {
+                        startingId -= 1;
+                    } else if (dir === 1) {
+                        startIndex += mod;
+                    } else if (dir === 3) {
+                        startIndex += mod + 2;
+                    } else if (dir === 4) {
+                        startingId += 1;
+                    } else if (dir === 5) {
+                        startingId -= mod + 2;
+                    } else if (dir === 6) {
+                        startingId -= mod + 1;
+                    } else {
+                        startingId -= mod;
+                    }
+                    console.log('new id data found => ', data[startingId]);
+                    collectedIds.push(startingId);      
                 }
-                collectedIds.push(startingId);             
+                      
             });
             return collectedIds;
         }
@@ -144,21 +160,40 @@
             let allIds = [];
             allIds.push(randPos);
             const pos = data[randPos].Position;
-            if (randDir === 2) {
-                for (let i = 0; i < myWord.length; i++) {
+           
+            for (let i = 1; i < myWord.length; i++) {
+                if (randDir === 2) {
                     randPos = randPos + mod + 1;
-                    allIds.push(randPos)
+
+                } else if (randDir === 0) {
+                    randPos = randPos - 1;
+                } else if (randDir === 1) {
+                    randPos = randPos + mod;
+                } else if (randDir === 3) {
+                    randPos = randPos + mod + 2;
+                } else if (randDir === 4) {
+                    randPos = randPos + 1;
+                } else if (randDir === 5) {
+                    randPos = randPos - (mod + 2)
+                } else if (randDir === 6) {
+                    randPos = randPos - (mod + 1)
+                } else {
+                    randPos = randPos - mod;
                 }
+               
+                allIds.push(randPos);
             }
             let collectedIds = [];
             let doubleCollision = false;
-            words.forEach(w => {
-                debugger;
+            for (let y = 0; y < words.length; y++) {
+                const w = words[y];
+                // debugger;
                 allIds = collectedIds.length ? collectedIds : allIds
                 if (collision(data, w, allIds)) {
                     if (collectedIds.length) {
                         doubleCollision = true;
-                        return;
+                        break;
+
                     }
                     const lowerCaseWord = w.Word.toLocaleLowerCase();
                     //const letterInCommon = lowerCaseWord.filter(value => myWord.includes(value));
@@ -170,44 +205,65 @@
                         }
                     }
                     if (letterInCommon) {
-                        const existingIndex = w.Word.findIndex(f => f === letterInCommon.toLocaleUpperCase());
-                        const newIndex = myWord.findIndex(f => f === letterInCommon);
+                        
+                        // const existingIndex = w.Word.findIndex(f => f === letterInCommon.toLocaleUpperCase());
+                        const existingIndex = w.Word.indexOf(letterInCommon.toLocaleUpperCase());
+                        // const newIndex = myWord.findIndex(f => f === letterInCommon);
+                        const newIndex = myWord.indexOf(letterInCommon);
                         let startIndex = newIndex - 0;
-                        const letterIds = word.Positions.map(p => {
+                        const letterIds = w.Positions.map(p => {
                             const item = data.find(d => d.Position.x === p.x && d.Position.y === p.y);
                             return item.ID;
                         });
-
+                        // letterIds.unshift(w.ID);
+                        // debugger;
                         let startingId = letterIds[existingIndex];
-                        if (randDir == 2) {
-                            if (startIndex > 0) {
-                                let iter = 0;
-                                while (iter < startIndex) {
+                        if (startIndex > 0) {
+                            let iter = 0;
+                            while (iter < startIndex) {
+                                if (ranDir === 2) {
                                     startingId -= mod + 1;
-                                    iter++;
+                                } else if (randDir === 0) {
+                                    startIndex += 1;
+                                } else if (ranDir === 1) {
+                                    startIndex -= mod;
+                                } else if (randDir === 3) {
+                                    startIndex -= mod + 2;
+                                } else if (randDir === 4) {
+                                    startIndex -= 1;
+                                } else if (randDir === 5) {
+                                    startIndex += mod + 2;
+                                } else if (randDir === 6) {
+                                    startIndex += mod + 1;
+                                } else {
+                                    startIndex += mod;
                                 }
-                            } 
+                                iter++;
+                            }//end while
                         }
 
-                        collectedIds = buildIds(myWord, startingId, randDir);
+                        collectedIds = buildIds(myWord, startingId, randDir, mod);
                     }
-                } else {
+                } else if (!collectedIds.length) {
                     collectedIds = buildIds(myWord, randPos, randDir);
                 }
-            });
+            }
+          
+           
             //translate to text to paste on other screen
             if (doubleCollision) {
                 console.log(myWord, ' could not be placed!');
             } else {
+                debugger;
                 const str = 'ID===' + collectedIds[0] + ':WD=' + myWord + ',D=' + randDir;
-                appenDom(str);
+                appendDom(str);
             }
         }
         const appendDom = (strRow) => {
             $('#listResult').empty();
             const $spanContainer = $('<span style="margin-left:5px;" />');
-            $spanContainer.append(strRow);
-            $('#listResult').append($spanContainer);
+            $spanContainer.text(strRow);
+            $('#listResults').append($spanContainer);
         }
         const wordSpec = (words) => {
             words.forEach(word => {
@@ -230,6 +286,16 @@
             }
 
         }
+        $('#btnMatch').click(function () {
+            let mod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
+            const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
+            const wordsLs = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters.Words;
+
+            const wordsLs = $('txtWords').val().split('\n');
+            wordsLs.forEach(w => {
+                test(rectData, mod, w, wordsLs);
+            });
+        });
         const loadTxtComponent = (uiId) => {
             return (serverData) => {
                 $('#' + uiId).val(serverData.SceneName);
