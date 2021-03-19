@@ -154,9 +154,9 @@
             return collectedIds;
         }
         const test = (data, mod, myWord, words) => {
-            // debugger;
-            let randPos = 828;
-            const randDir = 2;
+            //debugger;
+            let randPos = Math.floor(Math.random() * scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters.length);
+            const randDir = Math.floor((Math.random() * 8));
             let allIds = [];
             allIds.push(randPos);
             const pos = data[randPos].Position;
@@ -217,11 +217,12 @@
                         });
                         // letterIds.unshift(w.ID);
                         // debugger;
+                       
                         let startingId = letterIds[existingIndex];
                         if (startIndex > 0) {
                             let iter = 0;
                             while (iter < startIndex) {
-                                if (ranDir === 2) {
+                                if (randDir === 2) {
                                     startingId -= mod + 1;
                                 } else if (randDir === 0) {
                                     startIndex += 1;
@@ -279,6 +280,7 @@
         const wrapperReloadScene = (sceneData) => {
             return (puzzleData) => {
                 loadLettersCanvas(puzzleData);
+                wordsCollection = [...sceneData.Words];
                 test(puzzleData.AllLetters, +sceneData.Mod, 'ring', sceneData.Words);
                 // wordSpec(sceneData.Words);
                 // addWordsDom();
@@ -289,11 +291,11 @@
         $('#btnMatch').click(function () {
             let mod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
             const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
-            const wordsLs = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters.Words;
-
-            const wordsLs = $('txtWords').val().split('\n');
+           // const allWords = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters.Words;
+            debugger;
+            const wordsLs = $('#txtWords').val().split('\n');
             wordsLs.forEach(w => {
-                test(rectData, mod, w, wordsLs);
+                test(rectData, mod, w, wordsCollection);
             });
         });
         const loadTxtComponent = (uiId) => {

@@ -462,6 +462,22 @@ namespace SearchApp.Controllers
 
         }
         [HttpGet]
+        public ActionResult GetTestMerge()
+        {
+            object anamylous = new object();
+            using (StreamReader rd = new StreamReader(@"C:\projects\Go\imgprocessing\puzzle_boards\test-tiger#baby-tiger.txt_merged.txt"))
+            {
+                var data = rd.ReadToEnd();
+                anamylous = new {
+                    Content= data
+                };
+
+            }
+            var jsonResult = Json(anamylous, JsonRequestBehavior.AllowGet);
+            jsonResult.MaxJsonLength = int.MaxValue;
+            return jsonResult;
+        }
+        [HttpGet]
         public ActionResult GetPixelImage(string spriteName)
         {
             var returnPixels = new List<PixelModel>();

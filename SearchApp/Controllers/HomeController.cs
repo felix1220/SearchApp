@@ -50,19 +50,18 @@ namespace SearchApp.Controllers
         {
             return View();
         }
-<<<<<<< HEAD
+
         public ActionResult PlotColors()
         {
             return View();
         }
-        public ActionResult PasteMapper()
-=======
+
         public ActionResult PastMap()
         {
             return View();
         }
-        public ActionResult PlotColors()
->>>>>>> 38f69e1cef27bdcc82df6c214e4b73bdb66f4e43
+
+        public ActionResult MergeMap()
         {
             return View();
         }

@@ -1,0 +1,146 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <title>MergeMap</title>
+</head>
+<body>
+    <div style="width:50%;float:left">
+        <canvas id="canvas" width="500" height="500" class="controlPanel"> </canvas>
+
+
+    </div>
+    <div style="width:30%;float:right">
+        <div>
+            Spacing:<input type="text" id="txtSpacing" />
+        </div>
+        <div>
+            Font Style:<input type="text" id="txtFont" />
+        </div>
+        <div>
+            <button id="btnProcess">Submit</button>
+        </div>
+    </div>
+    <script>
+        let mapped = {};
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext("2d");
+
+        const processPositions = (positionsArr) => {
+            const len = positionsArr.length - 1;
+            const posObjArr = []
+            for (let i = 0; i < len; i++) {
+                if (i + 1 < len) {
+                    posObjArr.push({
+                        x: +positionsArr[i],
+                        y: +positionsArr[i+1]
+                    });
+                    i++
+                }
+            }
+            return posObjArr;
+        }
+        const processColors = (colorsArr) => {
+            const len = colorsArr.length - 1;
+            const posObjArr = [];
+            for (let i = 0; i < len; i++) {
+                if (i + 2 < len) {
+                    posObjArr.push({
+                        r: +colorsArr[i],
+                        g: +colorsArr[i + 1],
+                        b: +colorsArr[i + 2]
+                    });
+                    i += 2;
+                }
+            }
+            return posObjArr;
+        }
+
+        const processMap = (data) => {
+            const pixels = data.split(' ');
+            const colorGroup = [];
+            const posGroup = [];
+            const letterGroup = [];
+            // debugger;
+            pixels.forEach(p => {
+               // debugger;
+                const parts = p.split(':');
+                if (parts[1]) {
+                    const positionsArr = parts[1].split(',');
+                    const colorsArr = parts[2].split(',');
+                    const newPositions = processPositions(positionsArr);
+                    const newColors = processColors(colorsArr);
+                    posGroup.push(newPositions);
+                    colorGroup.push(newColors);
+                    letterGroup.push(parts[0]);
+                }
+               
+            });
+            mapped = {
+                positions: posGroup,
+                colors: colorGroup,
+                letters: letterGroup
+            };
+
+        }
+        const loadLettersCanvas = () => {
+            const spacing = +$('#txtSpacing').val();
+            const styling = $('#txtFont').val();
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.save();
+            colision = {};
+
+            for (let i = 0; i < mapped.letters.length; i++) {
+                const posArr = mapped.positions[i];
+                const colorArr = mapped.colors[i];
+                for (let p = 0; p < posArr.length; p++) {
+                    if (!colision[posArr[p].x + ',' + posArr[p].y]) {
+                        colision[posArr[p].x + ',' + posArr[p].y] = true;
+                    } else {
+                        console.log('Collision!! => ', mapped.letters[i], posArr[p].x + ',' + posArr[p].y);
+                        continue;
+                    }
+                    const color = colorArr[p];
+                    strRgb = `rgba(${color.r},${color.g},${color.b},1.0)`;
+                    ctx.font = styling;
+                    ctx.fillStyle = strRgb;
+                    ctx.fillText(mapped.letters[i], posArr[p].x * spacing, posArr[p].y * spacing);
+                   
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+        }
+        const operation = (list1, list2, isUnion = false) =>
+            list1.filter(a => isUnion === list2.some(b => a.x === b.x && a.y === b.y));
+
+        const loadSceneData = (endPt) => {
+            const fetchScenes = fetch(endPt);
+            fetchScenes.then(response => {
+                return response.json();
+            }).then(data => {
+                processMap(data.Content);
+                console.log('map => ', mapped.letters[0], mapped.letters[1]);
+               // console.log('map => ', mapped.positions[0], mapped.positions[1]);
+                const result = operation(mapped.positions[0], mapped.positions[1], true);
+                console.log('result => ', mapped.positions[0].filter( f => f.x === 5 && f.y === 3), mapped.positions[1].filter( f => f.x === 5 && f.y === 3));
+            });
+           
+        }
+        $('#btnProcess').click(function () {
+            loadLettersCanvas();
+            // loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
+        });
+        loadSceneData('http://localhost:5233/Data/GetTestMerge');
+    </script>
+</body>
+</html>
