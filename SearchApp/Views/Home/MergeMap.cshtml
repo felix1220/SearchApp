@@ -27,23 +27,40 @@
         <div>
             <button id="btnProcess">Submit</button>
         </div>
+        <div>
+            <hr />
+        </div>
+        <div>
+            <b>Collisions!</b>
+        </div>
+        <div id="loadCollisions">
+            
+        </div>
+        <div>
+            <button id="btnTurnOff">Turn Off</button>
+        </div>
     </div>
     <script>
         let mapped = {};
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext("2d");
+        let collisionArr = [];
 
         const processPositions = (positionsArr) => {
             const len = positionsArr.length - 1;
             const posObjArr = []
+            let cntr = 0;
             for (let i = 0; i < len; i++) {
                 if (i + 1 < len) {
                     posObjArr.push({
                         x: +positionsArr[i],
-                        y: +positionsArr[i+1]
+                        y: +positionsArr[i + 1],
+                        isVisible: true,
+                        id: cntr
                     });
                     i++
                 }
+                cntr++;
             }
             return posObjArr;
         }
@@ -55,7 +72,8 @@
                     posObjArr.push({
                         r: +colorsArr[i],
                         g: +colorsArr[i + 1],
-                        b: +colorsArr[i + 2]
+                        b: +colorsArr[i + 2],
+                        isVisible: true
                     });
                     i += 2;
                 }
@@ -90,6 +108,20 @@
             };
 
         }
+        const loadCollisions = () => {
+            console.log(collisionArr);
+            const container = $('#loadCollisions');
+            container.empty();
+            for (let i = 0; i < collisionArr.length; i++) {
+                console.log('All Collisions => ', collisionArr[i]);
+                const input = $('<input />', { type: 'checkbox', value: collisionArr[i].x + ',' + collisionArr[i].y + ',' + collisionArr[i].l }).appendTo(container);
+                const label = $('<label />', { text: collisionArr[i].x + ',' + collisionArr[i].y + ',' + collisionArr[i].l }).appendTo(container);
+                const div = $('<div />');
+                input.appendTo(div);
+                label.appendTo(div);
+                div.appendTo(container);
+            }
+        }
         const loadLettersCanvas = () => {
             const spacing = +$('#txtSpacing').val();
             const styling = $('#txtFont').val();
@@ -103,11 +135,32 @@
                 const posArr = mapped.positions[i];
                 const colorArr = mapped.colors[i];
                 for (let p = 0; p < posArr.length; p++) {
+                    if (!posArr[p].isVisible) {
+                        continue;
+                    }
                     if (!colision[posArr[p].x + ',' + posArr[p].y]) {
-                        colision[posArr[p].x + ',' + posArr[p].y] = true;
+                        colision[posArr[p].x + ',' + posArr[p].y] = {
+                            ...posArr[p],
+                            l: mapped.letters[i],
+                            id: i,
+                            pos: p
+                        };
                     } else {
                         console.log('Collision!! => ', mapped.letters[i], posArr[p].x + ',' + posArr[p].y);
-                        continue;
+                        collisionArr.push({
+                            ...posArr[p],
+                            l: mapped.letters[i],
+                            id: i,
+                            pos: p
+                        });
+                        collisionArr.push(colision[posArr[p].x + ',' + posArr[p].y]);
+                        /*const foundPos = posArr.filter(f => f.x === posArr[p].x && f.y === posArr[p].y);
+                       
+                        foundPos.forEach(f => {
+                            collisionArr.push(f)
+                        });*/
+                        // continue;
+
                     }
                     const color = colorArr[p];
                     strRgb = `rgba(${color.r},${color.g},${color.b},1.0)`;
@@ -136,8 +189,26 @@
             });
            
         }
+        $('#btnTurnOff').click(function () {
+            
+            $('input[type=checkbox]:checked').each(function (index, element) {
+                console.log('all checked => ', element.value);
+                const vals = element.value.split(',');
+                const col = collisionArr.find(f => f.x === +vals[0] && f.y === +vals[1] && f.l === vals[2]);
+                mapped.positions[col.id][col.pos].isVisible = false;
+                mapped.colors[col.id][col.pos].isVisible = false;
+                console.log('Result => ', mapped.positions[col.id][col.pos]);
+            });
+            collisionArr = [];
+            loadLettersCanvas();
+            loadCollisions();
+            
+            
+        });
+
         $('#btnProcess').click(function () {
             loadLettersCanvas();
+            loadCollisions();
             // loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
         });
         loadSceneData('http://localhost:5233/Data/GetTestMerge');
