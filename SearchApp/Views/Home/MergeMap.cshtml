@@ -19,10 +19,18 @@
     </div>
     <div style="width:30%;float:right">
         <div>
+            <select id="ddlSelectBoard">
+                <option value="">--Select Board--</option>
+            </select>
+        </div>
+        <div>
             Spacing:<input type="text" id="txtSpacing" />
         </div>
         <div>
             Font Style:<input type="text" id="txtFont" />
+        </div>
+        <div>
+            <input type="checkbox" name="chkMoveCanvas" value="canvasMove" id="chkMoveCanvas" /> Move Canvas
         </div>
         <div>
             <button id="btnProcess">Submit</button>
@@ -39,13 +47,31 @@
         <div>
             <button id="btnTurnOff">Turn Off</button>
         </div>
+        <div>
+            <button id="btnSaveChanges">Save Changes!</button>
+        </div>
     </div>
     <script>
         let mapped = {};
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext("2d");
         let collisionArr = [];
+        let mouseIsDown = false;
 
+        const Point2D = function (x, y) {
+            return {
+                x: x,
+                y: y
+            };
+        };
+        let initialDown = new Point2D(0, 0);
+
+        const getMousePos = (evt) => {
+            var rect = canvas.getBoundingClientRect();
+
+            //return new vector2d(evt.clientX - rect.left,evt.clientY - rect.top,-1,-1);
+            return new Point2D(evt.clientX - rect.left, evt.clientY - rect.top);
+        }
         const processPositions = (positionsArr) => {
             const len = positionsArr.length - 1;
             const posObjArr = []
@@ -88,7 +114,7 @@
             const letterGroup = [];
             // debugger;
             pixels.forEach(p => {
-               // debugger;
+                // debugger;
                 const parts = p.split(':');
                 if (parts[1]) {
                     const positionsArr = parts[1].split(',');
@@ -99,7 +125,7 @@
                     colorGroup.push(newColors);
                     letterGroup.push(parts[0]);
                 }
-               
+
             });
             mapped = {
                 positions: posGroup,
@@ -155,7 +181,7 @@
                         });
                         collisionArr.push(colision[posArr[p].x + ',' + posArr[p].y]);
                         /*const foundPos = posArr.filter(f => f.x === posArr[p].x && f.y === posArr[p].y);
-                       
+
                         foundPos.forEach(f => {
                             collisionArr.push(f)
                         });*/
@@ -167,11 +193,31 @@
                     ctx.font = styling;
                     ctx.fillStyle = strRgb;
                     ctx.fillText(mapped.letters[i], posArr[p].x * spacing, posArr[p].y * spacing);
-                   
+
                     ctx.stroke();
                 }
             }
             ctx.restore();
+        }
+        const joinArr = (dataArr, isPos) => {
+            let mergeStr = '';
+            for (let i = 0; i < dataArr.length; i++) {
+                if (dataArr[i].isVisible) {
+                    if (isPos) {
+                        mergeStr = mergeStr + dataArr[i].x + ',' + dataArr[i].y + ',';
+                    } else {
+                        mergeStr = mergeStr + dataArr[i].r + ',' + dataArr[i].g + ',' + dataArr[i].b + ',';
+                    }
+                }
+            }
+            return mergeStr;
+        }
+        const reMerge = () => {
+            let convertStr = '';
+            for (let i = 0; i < mapped.letters.length; i++) {
+                convertStr += mapped.letters[i] + ':' + joinArr(mapped.positions[i], true) + ':' + joinArr(mapped.colors[i], false) + ' ';
+            }
+            return convertStr;
         }
         const operation = (list1, list2, isUnion = false) =>
             list1.filter(a => isUnion === list2.some(b => a.x === b.x && a.y === b.y));
@@ -182,15 +228,73 @@
                 return response.json();
             }).then(data => {
                 processMap(data.Content);
-                console.log('map => ', mapped.letters[0], mapped.letters[1]);
-               // console.log('map => ', mapped.positions[0], mapped.positions[1]);
+                /*console.log('map => ', mapped.letters[0], mapped.letters[1]);
+                // console.log('map => ', mapped.positions[0], mapped.positions[1]);
                 const result = operation(mapped.positions[0], mapped.positions[1], true);
-                console.log('result => ', mapped.positions[0].filter( f => f.x === 5 && f.y === 3), mapped.positions[1].filter( f => f.x === 5 && f.y === 3));
+                console.log('result => ', mapped.positions[0].filter(f => f.x === 5 && f.y === 3), mapped.positions[1].filter(f => f.x === 5 && f.y === 3));*/
             });
-           
+
+        }
+        const bindDropDown = (fileArr) => {
+            const selectScene = $('#ddlSelectBoard');
+
+            fileArr.forEach(f => {
+                selectScene.append($('<option></option>').val(f).html(f));
+            });
+        }
+        const loadFiles = () => {
+            const endPt = 'http://localhost:5233/Data/GetMergedFiles'
+            const fetchScenes = fetch(endPt);
+            fetchScenes.then(response => {
+                return response.json();
+            }).then(data => {
+                const files = data.Content;
+                bindDropDown(files)
+            });
+        }
+        const updateRects = (deltaX, deltaY) => {
+            const rectData = mapped.positions;
+            rectData.forEach(rect => {
+                rect.x = rect.x + deltaX;
+                rect.y = rect.y + deltaY;
+            });
+        }
+        const updateServerData = async () => {
+            const data = reMerge();
+            // console.log('data str => ', data);
+            const postBody = { fileName: $('#ddlSelectBoard').val().replace('#', ':'), content: data };
+            const config = {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(postBody)
+            }
+            const fetchResponse = await fetch('http://localhost:5233/Data/UpdateMergedData', config);
+        }
+        canvas.onmousemove = (evt) => {
+
+            if ($('#chkMoveCanvas').is(":checked") && mouseIsDown) {
+                const pt = getMousePos(evt);
+                let deltaX = pt.x - initialDown.x;
+                let deltaY = pt.y - initialDown.y;
+                initialDown = new Point2D(pt.x, pt.y);
+                updateRects(deltaX, deltaY);
+                loadLettersCanvas();
+            }
+        };
+        canvas.onmouseup = function (evt) {
+            mouseIsDown = false;
+
+        };
+        canvas.onmousedown = (e) => {
+            const currPos = getMousePos(e);
+            initialDown = new Point2D(currPos.x, currPos.y);
+            mouseIsDown = true;
         }
         $('#btnTurnOff').click(function () {
-            
+
             $('input[type=checkbox]:checked').each(function (index, element) {
                 console.log('all checked => ', element.value);
                 const vals = element.value.split(',');
@@ -202,8 +306,29 @@
             collisionArr = [];
             loadLettersCanvas();
             loadCollisions();
-            
-            
+
+
+        });
+        $('#btnSaveChanges').click(function () {
+            updateServerData();
+        });
+
+        $('#ddlSelectBoard').on('change', () => {
+            if ($('#ddlSelectBoard').val() === '') {
+                return;
+            }
+            var url = 'http://localhost:5233/Data/GetPuzzleBoard/?name=' + $('#ddlSelectBoard').val().replace('#',':');
+            const fetchScenes = fetch(url);
+            fetchScenes.then(response => {
+                return response.json();
+            }).then(data => {
+                processMap(data.Content);
+                console.log('map => ', mapped.positions);
+                // console.log('map => ', mapped.positions[0], mapped.positions[1]);
+               // const result = operation(mapped.positions[0], mapped.positions[1], true);
+               // console.log('result => ', mapped.positions[0].filter(f => f.x === 5 && f.y === 3), mapped.positions[1].filter(f => f.x === 5 && f.y === 3));
+            });
+
         });
 
         $('#btnProcess').click(function () {
@@ -211,7 +336,8 @@
             loadCollisions();
             // loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
         });
-        loadSceneData('http://localhost:5233/Data/GetTestMerge');
+        //loadSceneData('http://localhost:5233/Data/GetTestMerge');
+        loadFiles();
     </script>
 </body>
 </html>

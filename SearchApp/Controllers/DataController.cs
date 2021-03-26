@@ -462,10 +462,46 @@ namespace SearchApp.Controllers
 
         }
         [HttpGet]
+        public ActionResult GetMergedFiles()
+        {
+            
+            var filePaths = Directory.GetFiles(@"C:\projects\Go\imgprocessing\puzzle_boards", "*.txt").ToList().Where(f => f.Contains("_merged")).ToList();
+            var justName = new List<string>();
+            filePaths.ForEach(f =>
+           {
+               var fileParts = f.Split(new Char[] { '\\' });
+               justName.Add(fileParts[fileParts.Length - 1]);
+           });
+            var anamylous = new
+            {
+                Content = justName
+            };
+            var jsonResult = Json(anamylous, JsonRequestBehavior.AllowGet);
+            jsonResult.MaxJsonLength = int.MaxValue;
+            return jsonResult;
+        }
+        [HttpGet]
+        public ActionResult GetPuzzleBoard(string name)
+        {
+            object anamylous = new object();
+            using (StreamReader rd = new StreamReader(@"C:\projects\Go\imgprocessing\puzzle_boards\" + name.Replace(":","#")))
+            {
+                var data = rd.ReadToEnd();
+                anamylous = new
+                {
+                    Content = data
+                };
+
+            }
+            var jsonResult = Json(anamylous, JsonRequestBehavior.AllowGet);
+            jsonResult.MaxJsonLength = int.MaxValue;
+            return jsonResult;
+        }
+        [HttpGet]
         public ActionResult GetTestMerge()
         {
             object anamylous = new object();
-            using (StreamReader rd = new StreamReader(@"C:\projects\Go\imgprocessing\puzzle_boards\test-tiger#baby-tiger.txt_merged.txt"))
+            using (StreamReader rd = new StreamReader(@"C:\projects\Go\imgprocessing\puzzle_boards\test-tiger#baby-tiger_merged.txt"))
             {
                 var data = rd.ReadToEnd();
                 anamylous = new {
@@ -476,6 +512,23 @@ namespace SearchApp.Controllers
             var jsonResult = Json(anamylous, JsonRequestBehavior.AllowGet);
             jsonResult.MaxJsonLength = int.MaxValue;
             return jsonResult;
+        }
+        [HttpPost]
+        public void UpdateMergedData(string fileName, string content)
+        {
+            const string folderPath = @"C:\projects\Go\imgprocessing\puzzle_boards\";
+            string file = fileName.Replace(":", "#");
+            if(System.IO.File.Exists(folderPath + file))
+            {
+                System.IO.File.Delete(folderPath + file);
+                using(StreamWriter wr = new StreamWriter(folderPath + file))
+                {
+                    wr.Write(content);
+                    wr.Flush();
+                }
+               
+            }
+
         }
         [HttpGet]
         public ActionResult GetPixelImage(string spriteName)
