@@ -78,6 +78,40 @@
             </div>
             <div>
                 <div>
+                    <b>Columns:</b>
+                    <input type="text" size="3" id="txtCols" />
+                </div>
+            </div>
+            <div>
+                <div>
+                    <b>Rows</b>
+                    <input type="text" size="3" id="txtRows" />
+                </div>
+            </div>
+            <div>
+                <div>
+                    <b>Across</b>
+                    <input type="text" size="3" id="txtAcross" />
+                </div>
+            </div>
+            <div>
+                <div>
+                    <b>Down</b>
+                    <input type="text" size="3" id="txtDown" />
+                </div>
+            </div>
+            <div>
+                <div>
+                    <button id="btnUpdateSections">Update Sections</button>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div>
+                <hr />
+            </div>
+            <div>
+                <div>
                     <b>ID:</b><input type="text" size="3" id="rectId"/>
                 </div>
                 <div>
@@ -115,6 +149,7 @@
             let wordsCollection = [];
             let sceneModel = null;
             let mouseIsDown = false;
+            let sections = [];
 
           
             const Point2D = function (x, y) {
@@ -151,7 +186,73 @@
                 postPuzzleData();
                // loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
             });
+            $('#btnUpdateSections').click(function () {
+                let mod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
+                const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
+                const plan = scenesCollection.find(x => x.type === 'puzzleData').data.Plan;
+                const netWidth = plan.Font + plan.Spacing;
+                let cols = +$('#txtCols').val();
+                let rows = +$('#txtRows').val();
+                let across = +$('#txtAcross').val();
+                let down = +$('#txtDown').val();
+                let cornerTopLeft = rectData[0].ID;
+                let cornerTopRight = 0;
+                let cornerBottomRight = 0;
+                let cornerBottomLeft = 0;
+                let copyCornerLeft = cornerTopLeft;
 
+                for (let d = 0; d < down; d++) {
+                    for (let i = 0; i < across; i++) {
+                        cornerTopRight = cornerTopLeft + (cols * (mod + 1));
+                        if (!rectData[cornerTopRight]) {
+                            //break
+                            cornerTopRight = overFlow(rectData, cornerTopRight, mod)
+                        }
+                        cornerBottomRight = cornerTopRight + rows;
+                        cornerBottomLeft = cornerTopLeft + rows;
+                        sections.push({
+                            topLeft: new Point2D(rectData[cornerTopLeft].Position.x, rectData[cornerTopLeft].Position.y - netWidth),
+                            topRight: new Point2D(rectData[cornerTopRight].Position.x, rectData[cornerTopRight].Position.y - netWidth),
+                            bottomRight: new Point2D(rectData[cornerBottomRight].Position.x, rectData[cornerBottomRight].Position.y),
+                            bottomLeft: new Point2D(rectData[cornerBottomLeft].Position.x, rectData[cornerBottomLeft].Position.y)
+                        });
+                        //cornerTopLeft = cornerTopRight + mod + 1;
+                        cornerTopLeft = cornerTopRight;
+
+                    }
+                    cornerTopLeft = copyCornerLeft;
+                    cornerTopLeft = cornerTopLeft + rows + 1;
+                    copyCornerLeft = cornerTopLeft;
+                    
+                }
+
+                console.log('Show sections => ', sections);
+                showSectionLines();
+
+            });
+            overFlow = (dataPoints, posIndx, mod) => {
+                do {
+                    posIndx = posIndx - (mod + 1);
+                } while (!dataPoints[posIndx])
+
+                return posIndx;
+            }
+            showSectionLines = () => {
+                ctx.beginPath();
+                ctx.save();
+                sections.forEach(f => {
+                    ctx.moveTo(f.topLeft.x, f.topLeft.y);
+                    ctx.lineTo(f.topRight.x, f.topRight.y);
+                    ctx.moveTo(f.topRight.x, f.topRight.y);
+                    ctx.lineTo(f.bottomRight.x, f.bottomRight.y);
+                    ctx.moveTo(f.bottomRight.x, f.bottomRight.y);
+                    ctx.lineTo(f.bottomLeft.x, f.bottomLeft.y);
+                    ctx.moveTo(f.bottomLeft.x, f.bottomLeft.y);
+                    ctx.lineTo(f.topLeft.x, f.topLeft.y);
+                });
+                ctx.stroke();
+                ctx.restore();
+            }
             buildWordGrid = () => {
                 let mod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus + 1;
                 const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
