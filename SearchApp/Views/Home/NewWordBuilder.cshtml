@@ -214,7 +214,10 @@
                             topLeft: new Point2D(rectData[cornerTopLeft].Position.x, rectData[cornerTopLeft].Position.y - netWidth),
                             topRight: new Point2D(rectData[cornerTopRight].Position.x, rectData[cornerTopRight].Position.y - netWidth),
                             bottomRight: new Point2D(rectData[cornerBottomRight].Position.x, rectData[cornerBottomRight].Position.y),
-                            bottomLeft: new Point2D(rectData[cornerBottomLeft].Position.x, rectData[cornerBottomLeft].Position.y)
+                            bottomLeft: new Point2D(rectData[cornerBottomLeft].Position.x, rectData[cornerBottomLeft].Position.y),
+                            letters: [],
+                            words:[],
+                            id: d + '-' + i
                         });
                         //cornerTopLeft = cornerTopRight + mod + 1;
                         cornerTopLeft = cornerTopRight;
@@ -226,10 +229,34 @@
                     
                 }
 
-                console.log('Show sections => ', sections);
+                
                 showSectionLines();
-
+                collectLetters(rectData, netWidth);
+                collectWords(rectData, netWidth);
+                console.log('Show sections => ', sections);
+                //console.log('Show words => ', wordsCollection);
             });
+            collectWords = (dataPoints, netWidth) => {
+                wordsCollection.forEach(w => {
+                    const letter = dataPoints[w.ID];
+                    const secFound = sections.find(s => letter.Position.x >= s.topLeft.x && letter.Position.x <= s.topRight.x - netWidth
+                        && letter.Position.y >= s.topLeft.y && letter.Position.y <= s.bottomLeft.y)
+                    if (secFound) {
+                        secFound.words.push(w);
+                    }
+                });
+            }
+            collectLetters = (dataPoints, netWidth) => {
+
+                dataPoints.forEach(d => {
+                    const secFound = sections.find(s => d.Position.x >= s.topLeft.x && d.Position.x <= s.topRight.x - netWidth
+                        && d.Position.y >= s.topLeft.y && d.Position.y <= s.bottomLeft.y);
+                    if (secFound) {
+                        secFound.letters.push(d);
+                    }
+
+                });
+            }
             overFlow = (dataPoints, posIndx, mod) => {
                 do {
                     posIndx = posIndx - (mod + 1);
