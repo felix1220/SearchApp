@@ -410,18 +410,41 @@
                 }
                 const fetchResponse = await fetch('http://localhost:5233/Data/SaveContentStream', config);
             }
+            const sectionsStringFy = () => {
+                const stringArr = sections.map(s => s.topLeft.x + ',' + s.topLeft.y + ':' +
+                    s.topRight.x + ',' + s.topRight.y + ':' +
+                    s.bottomRight.x + ',' + s.bottomRight.y + ':' +
+                    s.bottomLeft.x + ',' + s.bottomLeft.y + ':' + s.id);
+
+                return stringArr.join('\n');
+            }
+
             const postPuzzleData = async () => {
                 const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
                 const sceneData = scenesCollection.find(x => x.type === 'sceneData')?.data;
                 const mod = scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
-                const newWordArr = wordsCollection.map(item => {
+                const sectionData = sectionsStringFy();
+                const newWordArr = [];
+                sections.forEach(s => {
+                   const mappedTo = s.words.map(w => {
+                        return {
+                            Word: w.Word,
+                            Direction: w.Direction,
+                            ID: w.ID,
+                            Positions: w.AllWordLocations,
+                            Section: s.id
+                        }
+                   });
+                    newWordArr.push(mappedTo);
+                });
+               /* const newWordArr = wordsCollection.map(item => {
                     return {
                         Word: item.Word,
                         Direction: item.Direction,
                         ID: item.ID,
                         Positions: item.AllWordLocations
                     }
-                });
+                });*/
                 const realPuzzleName = (sceneData && sceneData.PuzzleName) ? sceneData.PuzzleName : $('#ddlSelectPuzzle').val();
                 const puzzleBody = {
                     SceneName: $('#txtPuzzleName').val(),
@@ -430,6 +453,7 @@
                     Mod: mod
                 };
                 let postObject = { pixels: rectData, name: $('#txtPuzzleName').val() + '#' + realPuzzleName };
+                let secObject = { data: sectionData, fileName: $('#txtPuzzleName').val() + '#' + realPuzzleName };
                 const config = {
                     method: 'POST',
                     headers: {
@@ -446,8 +470,18 @@
                     },
                     body: JSON.stringify(postObject)
                 }
+                const configSections = {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(secObject)
+                }
                 const fetchResponse = await fetch('http://localhost:5233/Data/SaveNewScene', config);
                 const postResponse = await fetch('http://localhost:5233/Data/SaveNewPuzzle', configPixels);
+                const saveSection = await fetch('http://localhost:5233/Data/SaveSections', configSections);
+
                 const data = await fetchResponse.json();
             }
             const generateRandomLetters = () => {

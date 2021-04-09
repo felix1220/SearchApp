@@ -521,14 +521,30 @@ namespace SearchApp.Controllers
             if(System.IO.File.Exists(folderPath + file))
             {
                 System.IO.File.Delete(folderPath + file);
-                using(StreamWriter wr = new StreamWriter(folderPath + file))
-                {
-                    wr.Write(content);
-                    wr.Flush();
-                }
                
             }
+            using (StreamWriter wr = new StreamWriter(folderPath + file))
+            {
+                wr.Write(content);
+                wr.Flush();
+            }
 
+        }
+        [HttpPost]
+        public void SaveSections(string data, string fileName)
+        {
+            const string folderPath = @"C:\projects\Go\imgprocessing\puzzle_boards\";
+            string file = fileName.Replace(":", "#");
+
+            if(System.IO.File.Exists(folderPath + file + "_sections.txt"))
+            {
+                System.IO.File.Delete(folderPath + file + "_sections.txt");
+            }
+            using (StreamWriter wr = new StreamWriter(folderPath + file + "_sections.txt"))
+            {
+                wr.Write(data);
+                wr.Flush();
+            }
         }
         [HttpGet]
         public ActionResult GetPixelImage(string spriteName)

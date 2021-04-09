@@ -12,5 +12,6 @@ namespace SearchApp.Models
         public int ID { get; set; }
 
         public List<PositionModel> Positions { get; set; }
+        public string Section { get; set; }
     }
 }
