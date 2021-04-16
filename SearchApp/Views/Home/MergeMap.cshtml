@@ -13,8 +13,13 @@
 </head>
 <body>
     <div style="width:50%;float:left">
-        <canvas id="canvas" width="500" height="500" class="controlPanel"> </canvas>
-
+        <div>
+            <canvas id="canvas" width="500" height="500" class="controlPanel"> </canvas>
+        </div>
+        <hr style="width: 100%" />
+        <div>
+            <canvas id="subCanvas" width="300" height="300" class="controlPanel"> </canvas>
+        </div>
 
     </div>
     <div style="width:30%;float:right">
@@ -54,9 +59,12 @@
     <script>
         let mapped = {};
         const canvas = document.getElementById('canvas');
+       const subCanvas = document.getElementById('subCanvas');
         const ctx = canvas.getContext("2d");
+       const subCtx = subCanvas.getContext("2d");
         let collisionArr = [];
         let mouseIsDown = false;
+        let sectionGrp = {};
 
         const Point2D = function (x, y) {
             return {
@@ -72,19 +80,36 @@
             //return new vector2d(evt.clientX - rect.left,evt.clientY - rect.top,-1,-1);
             return new Point2D(evt.clientX - rect.left, evt.clientY - rect.top);
         }
-        const processPositions = (positionsArr) => {
+        const groupSections = (posGroup) => {
+            //debugger;
+            console.log('Group outline => ', posGroup[0][0]);
+            posGroup.forEach(g => {
+                g.filter((value, index, self) => self.map(x => x.section).indexOf(value.section) == index)
+            });
+            return posGroup.map(p => p.section);
+        }
+        const processPositions = (positionsArr, letter) => {
             const len = positionsArr.length - 1;
             const posObjArr = []
             let cntr = 0;
             for (let i = 0; i < len; i++) {
-                if (i + 1 < len) {
+                if (i + 2 < len) {
                     posObjArr.push({
                         x: +positionsArr[i],
                         y: +positionsArr[i + 1],
+                        section: positionsArr[i + 2],
                         isVisible: true,
-                        id: cntr
+                        id: cntr,
+                        letter: letter
                     });
-                    i++
+                    const lastObj = posObjArr[posObjArr.length - 1];
+                    if (!sectionGrp[lastObj.section]) {
+                        sectionGrp[lastObj.section] = [];
+                        sectionGrp[lastObj.section].push(lastObj);
+                    } else {
+                        sectionGrp[lastObj.section].push(lastObj);
+                    }
+                    i += 2;
                 }
                 cntr++;
             }
@@ -119,7 +144,7 @@
                 if (parts[1]) {
                     const positionsArr = parts[1].split(',');
                     const colorsArr = parts[2].split(',');
-                    const newPositions = processPositions(positionsArr);
+                    const newPositions = processPositions(positionsArr, parts[0]);
                     const newColors = processColors(colorsArr);
                     posGroup.push(newPositions);
                     colorGroup.push(newColors);
@@ -127,6 +152,8 @@
                 }
 
             });
+            const result = groupSections(posGroup);
+            console.log('The sections => ', result);
             mapped = {
                 positions: posGroup,
                 colors: colorGroup,
@@ -147,6 +174,28 @@
                 label.appendTo(div);
                 div.appendTo(container);
             }
+        }
+        const loadSubCanvas = (sectionId) => {
+            const spacing = +$('#txtSpacing').val();
+            const styling = $('#txtFont').val();
+            const section = sectionGrp[sectionId];
+            subCtx.clearRect(0, 0, subCanvas.width, subCanvas.height);
+            subCtx.beginPath();
+            subCtx.save();
+            debugger;
+            subCtx.rect(50, 50, 100, 150);
+            for (let i = 0; i < section.length; i++) {
+                subCtx.font = styling;
+                //subCtx.fillStyle = strRgb;
+                subCtx.fillText(section[i].letter, section[i].x * spacing, section[i].y * spacing);
+                //subCtx.stroke();
+            }
+           
+            
+
+            subCtx.stroke();
+            subCtx.restore();
+
         }
         const loadLettersCanvas = () => {
             const spacing = +$('#txtSpacing').val();
@@ -253,10 +302,25 @@
             });
         }
         const updateRects = (deltaX, deltaY) => {
+            const spacing = +$('#txtSpacing').val();
+           /* const rectData = mapped.positions;
+            mapped.positions = mapped.positions.map(rect => {
+                return {
+                    ...rect,
+                    x: rect.x + deltaX,
+                    y: rect.y + deltaY
+                }
+            });*/
             const rectData = mapped.positions;
-            rectData.forEach(rect => {
-                rect.x = rect.x + deltaX;
-                rect.y = rect.y + deltaY;
+            rectData.forEach(rectArr => {
+                rectArr.forEach(rect => {
+                    if (!isNaN(rect.x) && !isNaN(rect.y)) {
+                        rect.x = rect.x + ( deltaX / spacing);
+                        rect.y = rect.y + ( deltaY / spacing);
+                    }
+                });
+               
+               
             });
         }
         const updateServerData = async () => {
@@ -292,6 +356,7 @@
             const currPos = getMousePos(e);
             initialDown = new Point2D(currPos.x, currPos.y);
             mouseIsDown = true;
+            console.log('The mouse is down => ', mouseIsDown);
         }
         $('#btnTurnOff').click(function () {
 
@@ -334,6 +399,8 @@
         $('#btnProcess').click(function () {
             loadLettersCanvas();
             loadCollisions();
+            loadSubCanvas('0-0');
+            //console.log('First Section => ', sectionGrp['0-0'])
             // loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
         });
         //loadSceneData('http://localhost:5233/Data/GetTestMerge');
