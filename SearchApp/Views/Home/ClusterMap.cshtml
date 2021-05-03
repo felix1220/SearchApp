@@ -1,0 +1,412 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>ClusterMap</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.core.min.js"></script>
+</head>
+<body>
+    <div style="width:50%;float:left">
+        <canvas id="canvas" width="500" height="500" class="controlPanel"> </canvas>
+    </div>
+    <div style="width:30%;float:right">
+        <div>
+            <span>
+                <b>Select Scene:</b>
+                <select id="ddlSelectScene">
+                    <option value="">--Select Scene--</option>
+                </select>
+            </span>&nbsp;
+        </div>
+        <div>
+            <span>
+                <input type="checkbox" name="selectMaps" value="maps" id="selectMaps" /> Select Maps
+            </span>&nbsp;
+            <span>
+                <input type="checkbox" name="chkMoveCanvas" value="canvasMove" id="chkMoveCanvas" /> Move Canvas
+            </span>
+        </div>
+        <div>
+            <button id="btnShapeDone">Shape Done</button>
+        </div>
+        <div>
+            <div>
+                <textarea id="txtWords" rows="10" cols="30"></textarea>
+            </div>
+        </div><br />
+        <div>
+            <button id="btnMatch">Match!</button>
+        </div>
+        <div id="listResults">
+
+        </div>
+    </div>
+    <script>
+        let scenesCollection = [];
+        let wordsCollection = [];
+        let collector = [];
+        let shapes = [];
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext("2d");
+        let mouseIsDown = false;
+
+        const Point2D = function (x, y) {
+            return {
+                x: x,
+                y: y
+            };
+        };
+        const Line = function (start, end) {
+            return {
+                start: start,
+                end: end
+            };
+        };
+        let initialDown = new Point2D(0, 0);
+        const getMousePos = (evt) => {
+            var rect = canvas.getBoundingClientRect();
+
+            //return new vector2d(evt.clientX - rect.left,evt.clientY - rect.top,-1,-1);
+            return new Point2D(evt.clientX - rect.left, evt.clientY - rect.top);
+        }
+        const findPixel = (pickedPos) => {
+            const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
+            const plan = scenesCollection.find(x => x.type === 'puzzleData').data.Plan;
+            const netWidth = plan.Font + plan.Spacing;
+            let foundRect = null;
+            for (let i = 0; i < rectData.length; i++){
+                const rect = rectData[i];
+                if (pickedPos.x >= rect.Position.x && pickedPos.x <= rect.Position.x + netWidth &&
+                    pickedPos.y >= rect.Position.y - netWidth && pickedPos.y <= rect.Position.y) {
+                    foundRect = rect;
+                    break;
+                }
+            }
+            return rect;
+        }
+        const updateRects = (deltaX, deltaY) => {
+            const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
+            rectData.forEach(rect => {
+                rect.Position.x = rect.Position.x + deltaX;
+                rect.Position.y = rect.Position.y + deltaY;
+            });
+        }
+        canvas.onmouseup = function (evt) {
+            mouseIsDown = false;
+
+        };
+        canvas.onmousemove = (evt) => {
+
+            if ($('#chkMoveCanvas').is(":checked") && mouseIsDown) {
+                const pt = getMousePos(evt);
+                let deltaX = pt.x - initialDown.x;
+                let deltaY = pt.y - initialDown.y;
+                initialDown = new Point2D(pt.x, pt.y);
+                updateRects(deltaX, deltaY);
+                const rectData = scenesCollection.find(x => x.type === 'puzzleData').data;
+                loadLettersCanvas(rectData);
+
+            }
+        };
+        canvas.onmousedown = (e) => {
+            const currPos = getMousePos(e);
+            initialDown = new Point2D(currPos.x, currPos.y);
+            if ($('#chkMoveCanvas').is(":checked")) {
+                mouseIsDown = true;
+            }
+            if ($('#selectMaps').is(":checked")) {
+                processSelections(currPos);
+            }
+           
+        }
+        const defineShape = () => {
+            const shapeKey = 'shape' + (shapes.length + 1);
+            const loadLines = []
+            const lastArr = collector[collector.length - 1];
+            for (let i = 0; i < lastArr.length; i++) {
+                if (i + 1 < lastArr.length) {
+                    const newLine = new Line(lastArr[i], lastArr[i + 1]);
+                    loadLines.push(newLine);
+                } else {
+                    const newLine = new Line(lastArr[0], lastArr[lastArr.length -1]);
+                    loadLines.push(newLine);
+                }
+            }
+            shapes[shapeKey] = [...loadLines];
+
+        }
+        const processSelections = (selection) => {
+            const pixel = findPixel(selection);
+            const lastArr = collector[collector.length - 1];
+            lastArr.push(pixel);
+            
+        }
+        const findMinMax = (pickedPoints) => {
+            const justXs = pickedPoints.map(p => p.Position.x);
+            const justYs = pickedPoints.map(p => p.Position.y);
+            const minX = Math.min(...justXs);
+            const maxX = Math.max(...justXs);
+            const minY = Math.min(...justYs);
+            const maxY = Math.max(...justYs);
+            return {
+                minX: minX,
+                maxX: maxX,
+                minY: minY,
+                maxY: maxY
+            };
+        }
+        const getShapeKey = () => {
+            let randPos = Math.floor(Math.random() * shapes.length);
+            return 'shape' + randPos;
+        }
+        const collectDirPoints = (startingPixel, randDir, mod, myWord) => {
+            const randPos = startingPixel.ID;
+            const allIds = [];
+            allIds.push(randPos);
+            for (let i = 1; i < myWord.length; i++) {
+                if (randDir === 2) {
+                    randPos = randPos + mod + 1;
+
+                } else if (randDir === 0) {
+                    randPos = randPos - 1;
+                } else if (randDir === 1) {
+                    randPos = randPos + mod;
+                } else if (randDir === 3) {
+                    randPos = randPos + mod + 2;
+                } else if (randDir === 4) {
+                    randPos = randPos + 1;
+                } else if (randDir === 5) {
+                    randPos = randPos - (mod + 2)
+                } else if (randDir === 6) {
+                    randPos = randPos - (mod + 1)
+                } else {
+                    randPos = randPos - mod;
+                }
+
+                allIds.push(randPos);
+            }
+            return allIds;
+        }
+        const mergeShape = (shapeKey, data, mod, myWord) => {
+            const randPos = +shapeKey.replace('shape', '');
+            const pickedPoints = collector[randPos];
+            const boundary = findMinMax(pickedPoints);
+            const shapePixels = data.filter(d => d.Position.x > boundary.minX && d.Position.x < boundary.maxX &&
+                d.Position.y > boundary.minY && d.Position.y < boundary.maxY);
+            const randShapeTrials = [];
+            randShapeTrials.push(Math.floor(Math.random() * shapePixels.length));
+            randShapeTrials.push(Math.floor(Math.random() * shapePixels.length));
+            randShapeTrials.push(Math.floor(Math.random() * shapePixels.length));
+            for (let i = 0; i < randShapeTrials.length; i++) {
+                let noIntersect = true;
+                const randDirs = [Math.floor((Math.random() * 8)), Math.floor((Math.random() * 8)), Math.floor((Math.random() * 8))];
+
+                for (let d = 0; d < randDirs.length; d++) {
+                    const direction = randDirs[d];
+                    const chosenPixel = shapePixels[randShapeTrials[i]];
+                    const wordPoints = collectDirPoints(chosenPixel, direction, mod, myWord);
+                   
+                    for (let x = 0; x < shapes[shapeKey].length; x++) {
+                        const shapeLine = shapes[shapeKey][x];
+                        const testLine = new Line(wordPoints[0], wordPoints[wordPoints.length - 1]);
+                        noIntersect = !(intersects(testLine.start.Position.x, testLine.start.Position.y, testLine.end.Position.x, testLine.end.Position.y, shapeLine.start.Position.x,
+                            shapeLine.start.Position.y, shapeLine.end.Position.x, shapeLine.end.Position.y));
+                        if (!noIntersect) {
+                            break;
+                        }
+                    }//end for
+                    if (noIntersect) {
+                        //place word in collection but check first
+                        for (let w = 0; w < wordsCollection.length; w++) {
+                            const testLine = new Line(wordPoints[0], wordPoints[wordPoints.length - 1]);
+                            const wordArr = wordsCollection[w];
+                            const wordLine = 
+                        }//end word loop
+                        break;
+                    }
+                    
+                }
+                if (noIntersect) {
+                    break;
+                }
+
+            }
+            return noIntersect
+
+        }
+        const startPlacingWords = (data, mod, myWord) => {
+           
+            // lets pick 3 random shapes if available
+            const shapeTrials = [];
+            if (pickedShape.length >= 3) {
+                shapeTrials.push(getShapeKey());
+                shapeTrials.push(getShapeKey());
+                shapeTrials.push(getShapeKey());
+            } else if (pickedShape.length === 2) {
+                shapeTrials.push('shape1');
+                shapeTrials.push('shape2');
+            } else {
+                shapeTrials.push('shape1');
+            }
+           
+            let finished = false;
+            do {
+
+            } while (!finished);
+           
+           
+
+        }
+        const loadLettersCanvas = (data) => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.save();
+            data.AllLetters.forEach((rect) => {
+                if (rect.IsVisible) {
+                    let strRgb = `rgba(${rect.BackgroundRed},${rect.BackgroundGreen},${rect.BackgroundBlue},1.0)`;
+
+                    ctx.fillStyle = strRgb;
+                    let newY = rect.Position.y - data.Plan.Font;
+                    const width = data.Plan.Font;
+                    const height = data.Plan.Font;
+                    ctx.fillRect(rect.Position.x, newY, width, height);
+                    // ctx.stroke();
+
+                    if (rect.Outline) {
+                        // console.log(rect.letter, i);
+                        let block = data.Plan.Font + data.Plan.Spacing;
+                        ctx.rect(rect.Position.x, rect.Position.y - block, width, height);
+                    }
+
+                    strRgb = `rgba(${rect.Red},${rect.Green},${rect.Blue},1.0)`;
+                    ctx.font = data.Plan.Style;
+                    ctx.fillStyle = strRgb;
+                    ctx.fillText(rect.Letter, rect.Position.x, rect.Position.y);
+                    ctx.stroke();
+                    // console.log(strRgb);
+                }
+            });
+            // highlightWords();
+            ctx.restore();
+        }
+        const wrapperReloadScene = (sceneData) => {
+            return (puzzleData) => {
+                loadLettersCanvas(puzzleData);
+            }
+
+        }
+        const loadTxtComponent = (uiId) => {
+            return (serverData) => {
+               // $('#' + uiId).val(serverData.SceneName);
+
+                sceneModel = serverData;
+                const justPuzzleName = serverData.PuzzleName.split('#')[1];
+                const puzzleUrl = 'http://localhost:5233/Data/GetLoadedScenePuzzle/?scenePuzzleName=' + serverData.SceneName + '&puzzleName=' + justPuzzleName;
+                loadSceneData(puzzleUrl, 'puzzleData', wrapperReloadScene(serverData));
+
+            }
+        }
+        const loadDDLComponent = (uiId) => {
+            return (serverData) => {
+                let selectScene = $('#' + uiId);
+                serverData.forEach(s => {
+                    selectScene.append($('<option></option>').val(s).html(s));
+                });
+
+            }
+
+        }
+        const intersects = (a, b, c, d, p, q, r, s) => {
+            let det, gamma, lambda;
+            det = (c - a) * (s - q) - (r - p) * (d - b);
+            if (det === 0) {
+                return false;
+            } else {
+                lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
+                gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
+                return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
+            }
+        }
+        const demoIntersect = () => {
+            //build lines
+            const line1 = new Line(new Point2D(50, 50), new Point2D(125, 100));
+            const line2 = new Line(new Point2D(10, 10), new Point2D(120, 110));
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.save();
+            ctx.moveTo(line1.start.x, line1.start.y);
+            ctx.lineTo(line1.end.x, line1.end.y);
+            ctx.moveTo(line2.start.x, line2.start.y);
+            ctx.lineTo(line2.end.x, line2.end.y);
+            ctx.stroke();
+            ctx.restore();
+            console.log('Should intersect ? => ', intersects(line1.start.x,line1.start.y,line1.end.x, line1.end.y,line2.start.x, line2.start.y, line2.end.x, line2.end.y));
+
+        }
+        const loadSceneData = (endPt, typeId, callBackFunc) => {
+            const fetchScenes = fetch(endPt);
+            fetchScenes.then(response => {
+                return response.json();
+            }).then(data => {
+                if (typeId) {
+                    if (scenesCollection.length > 0) {
+                        scenesCollection[0] = {
+                            type: typeId,
+                            data: data
+                        }
+                    } else {
+
+                        scenesCollection.push({
+                            type: typeId,
+                            data: data
+                        });
+
+                    }
+                }
+                if (callBackFunc) {
+                    callBackFunc(data);
+                }
+
+
+            });
+        }
+        $("#selectMaps").change(function () {
+            if (this.checked) {
+                collector.push([]);
+            }
+        });
+
+        $('#ddlSelectScene').on('change', () => {
+            if ($('#ddlSelectScene').val() === '') {
+                return;
+            }
+            var url = 'http://localhost:5233/Data/GetLoadedSceneJson/?fileName=' + $('#ddlSelectScene').val();
+            wordsCollection = [];
+            loadSceneData(url, 'sceneData', loadTxtComponent('txtPuzzleName'));
+        });
+        $('#btnMatch').click(function () {
+            let mod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
+            const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
+            // const allWords = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters.Words;
+            debugger;
+            const wordsLs = $('#txtWords').val().split('\n');
+            wordsLs.forEach(w => {
+                test(rectData, mod, w);
+            });
+        });
+        $('#btnShapeStop').click(function () {
+            collector.push([]);
+            $('#selectMaps').prop('checked', false);
+        });
+        loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
+        demoIntersect();
+    </script>
+</body>
+</html>

@@ -943,6 +943,7 @@
                             const rectActions = rectResult[1].split(',');
 
                             eval('foundRect = rectData.find(x => x.' + justId + ')');
+                            console.log('Found Rect is => ', foundRect);
                             rectActions.forEach(action => {
                                 // debugger;
                                 eval('foundRect.' + action);

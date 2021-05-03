@@ -65,5 +65,14 @@ namespace SearchApp.Controllers
         {
             return View();
         }
+
+        public ActionResult NftExport()
+        {
+            return View();
+        }
+        public ActionResult ClusterMap()
+        {
+            return View();
+        }
     }
 }

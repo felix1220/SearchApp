@@ -154,7 +154,7 @@
             return collectedIds;
         }
         const test = (data, mod, myWord, words) => {
-            //debugger;
+           
             let randPos = Math.floor(Math.random() * scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters.length);
             const randDir = Math.floor((Math.random() * 8));
             let allIds = [];
@@ -185,9 +185,12 @@
             }
             let collectedIds = [];
             let doubleCollision = false;
+            if (!words.length) {
+                collectedIds = [...allIds];
+            }
             for (let y = 0; y < words.length; y++) {
                 const w = words[y];
-                // debugger;
+                debugger;
                 allIds = collectedIds.length ? collectedIds : allIds
                 if (collision(data, w, allIds)) {
                     if (collectedIds.length) {
@@ -246,6 +249,7 @@
                         collectedIds = buildIds(myWord, startingId, randDir, mod);
                     }
                 } else if (!collectedIds.length) {
+                    debugger;
                     collectedIds = buildIds(myWord, randPos, randDir);
                 }
             }
@@ -264,7 +268,9 @@
             $('#listResult').empty();
             const $spanContainer = $('<span style="margin-left:5px;" />');
             $spanContainer.text(strRow);
-            $('#listResults').append($spanContainer);
+            $div = $('<div>');
+            $div.append($spanContainer);
+            $('#listResults').append($div);
         }
         const wordSpec = (words) => {
             words.forEach(word => {

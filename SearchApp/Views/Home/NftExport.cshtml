@@ -1,0 +1,71 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>NftExport</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <style>
+        .controlPanel {
+            background: white;
+            padding-left: 0;
+            padding-right: 0;
+            -webkit-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            -moz-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+        }
+
+    </style>
+</head>
+<body>
+    <div>
+        <canvas id="canvas" width="1000" height="1000" class="controlPanel"> </canvas>
+
+
+    </div>
+    <script>
+        let mapped = {};
+        const processMap = (data) => {
+            const pixels = data.split(' ');
+            const colorGroup = [];
+            const posGroup = [];
+            const letterGroup = [];
+            // debugger;
+            pixels.forEach(p => {
+                // debugger;
+                const parts = p.split(':');
+                if (parts[1]) {
+                    const positionsArr = parts[1].split(',');
+                    const colorsArr = parts[2].split(',');
+                    const newPositions = processPositions(positionsArr, parts[0]);
+                    const newColors = processColors(colorsArr);
+                    posGroup.push(newPositions);
+                    colorGroup.push(newColors);
+                    letterGroup.push(parts[0]);
+                }
+
+            });
+            const result = groupSections(posGroup);
+            console.log('The sections => ', result);
+            mapped = {
+                positions: posGroup,
+                colors: colorGroup,
+                letters: letterGroup
+            };
+
+        }
+        const url = 'http://localhost:5233/Data/GetSinglePuzzle/?puzzleName=' + 'peace-rings-color';
+        const fetchScenes = fetch(url);
+        fetchScenes.then(response => {
+            return response.json();
+        }).then(data => {
+            processMap(data.Content);
+        });
+    </script>
+</body>
+</html>

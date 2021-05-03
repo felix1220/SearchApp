@@ -192,6 +192,8 @@
     <Content Include="Views\Home\PastMap.cshtml" />
     <Content Include="Views\Home\PlotColors.cshtml" />
     <Content Include="Views\Home\MergeMap.cshtml" />
+    <Content Include="Views\Home\NftExport.cshtml" />
+    <Content Include="Views\Home\ClusterMap.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
