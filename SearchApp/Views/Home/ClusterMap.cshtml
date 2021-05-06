@@ -89,7 +89,7 @@
                     break;
                 }
             }
-            return rect;
+            return foundRect;
         }
         const updateRects = (deltaX, deltaY) => {
             const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
@@ -127,6 +127,7 @@
            
         }
         const defineShape = () => {
+            debugger;
             const shapeKey = 'shape' + (shapes.length + 1);
             const loadLines = []
             const lastArr = collector[collector.length - 1];
@@ -147,6 +148,14 @@
             const lastArr = collector[collector.length - 1];
             lastArr.push(pixel);
             
+        }
+        const appendDom = (strRow) => {
+            $('#listResult').empty();
+            const $spanContainer = $('<span style="margin-left:5px;" />');
+            $spanContainer.text(strRow);
+            $div = $('<div>');
+            $div.append($spanContainer);
+            $('#listResults').append($div);
         }
         const findMinMax = (pickedPoints) => {
             const justXs = pickedPoints.map(p => p.Position.x);
@@ -204,6 +213,7 @@
             randShapeTrials.push(Math.floor(Math.random() * shapePixels.length));
             randShapeTrials.push(Math.floor(Math.random() * shapePixels.length));
             randShapeTrials.push(Math.floor(Math.random() * shapePixels.length));
+            const wordSuccess = false;
             for (let i = 0; i < randShapeTrials.length; i++) {
                 let noIntersect = true;
                 const randDirs = [Math.floor((Math.random() * 8)), Math.floor((Math.random() * 8)), Math.floor((Math.random() * 8))];
@@ -215,30 +225,40 @@
                    
                     for (let x = 0; x < shapes[shapeKey].length; x++) {
                         const shapeLine = shapes[shapeKey][x];
-                        const testLine = new Line(wordPoints[0], wordPoints[wordPoints.length - 1]);
+                        const testLine = new Line(data[wordPoints[0]], data[wordPoints[wordPoints.length - 1]]);
                         noIntersect = !(intersects(testLine.start.Position.x, testLine.start.Position.y, testLine.end.Position.x, testLine.end.Position.y, shapeLine.start.Position.x,
                             shapeLine.start.Position.y, shapeLine.end.Position.x, shapeLine.end.Position.y));
-                        if (!noIntersect) {
+                        if (!noIntersect) { //means there is an intersection no need to continue
                             break;
                         }
                     }//end for
-                    if (noIntersect) {
+                    if (noIntersect) {// if no intersection...lets check intersection with existing words
                         //place word in collection but check first
                         for (let w = 0; w < wordsCollection.length; w++) {
-                            const testLine = new Line(wordPoints[0], wordPoints[wordPoints.length - 1]);
+                            const testLine = new Line(data[wordPoints[0]], data[wordPoints[wordPoints.length - 1]]);
                             const wordArr = wordsCollection[w];
-                            const wordLine = 
+                            const wordLine = new Line(data[wordArr[0]], data[wordArr[wordArr.lenght - 1]]);
+                            noIntersect = !(intersects(testLine.start.Position.x, testLine.start.Position.y, testLine.end.Position.x, testLine.end.Position.y, wordLine.start.Position.x, wordLine.start.Position.y,
+                                wordLine.end.Position.x, wordLine.end.Position.y));
+                            if (!noIntersect) {
+                                break;
+                            }
                         }//end word loop
-                        break;
+                        if (noIntersect) {
+                            wordsCollection.push(wordPoints);
+                            const str = 'ID===' + wordPoints[0] + ':WD=' + myWord + ',D=' + direction;
+                            appendDom(str);
+                        }
                     }
                     
                 }
                 if (noIntersect) {
+                    wordSuccess = noIntersect;
                     break;
                 }
 
             }
-            return noIntersect
+            return wordSuccess;
 
         }
         const startPlacingWords = (data, mod, myWord) => {
@@ -257,8 +277,10 @@
             }
            
             let finished = false;
+            let iter = 0;
             do {
-
+                finished = mergeShape(shapeTrials[iter], data, mod, myWord);
+                iter++;
             } while (!finished);
            
            
@@ -377,6 +399,10 @@
 
             });
         }
+        $('#btnShapeDone').click(function () {
+            defineShape();
+        });
+
         $("#selectMaps").change(function () {
             if (this.checked) {
                 collector.push([]);
@@ -395,10 +421,10 @@
             let mod = +scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
             const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
             // const allWords = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters.Words;
-            debugger;
+            //debugger;
             const wordsLs = $('#txtWords').val().split('\n');
             wordsLs.forEach(w => {
-                test(rectData, mod, w);
+                startPlacingWords(rectData, mod, w);
             });
         });
         $('#btnShapeStop').click(function () {
@@ -406,7 +432,7 @@
             $('#selectMaps').prop('checked', false);
         });
         loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
-        demoIntersect();
+        //demoIntersect();
     </script>
 </body>
 </html>
