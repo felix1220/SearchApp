@@ -176,7 +176,7 @@
             return 'shape' + randPos;
         }
         const collectDirPoints = (startingPixel, randDir, mod, myWord) => {
-            const randPos = startingPixel.ID;
+            let randPos = startingPixel.ID;
             const allIds = [];
             allIds.push(randPos);
             for (let i = 1; i < myWord.length; i++) {
@@ -205,7 +205,8 @@
         }
         const mergeShape = (shapeKey, data, mod, myWord) => {
             const randPos = +shapeKey.replace('shape', '');
-            const pickedPoints = collector[randPos];
+            const pickedPoints = collector[randPos - 1];
+            console.log('The picked points => ', pickedPoints);
             const boundary = findMinMax(pickedPoints);
             const shapePixels = data.filter(d => d.Position.x > boundary.minX && d.Position.x < boundary.maxX &&
                 d.Position.y > boundary.minY && d.Position.y < boundary.maxY);
@@ -226,6 +227,7 @@
                     for (let x = 0; x < shapes[shapeKey].length; x++) {
                         const shapeLine = shapes[shapeKey][x];
                         const testLine = new Line(data[wordPoints[0]], data[wordPoints[wordPoints.length - 1]]);
+                        debugger;
                         noIntersect = !(intersects(testLine.start.Position.x, testLine.start.Position.y, testLine.end.Position.x, testLine.end.Position.y, shapeLine.start.Position.x,
                             shapeLine.start.Position.y, shapeLine.end.Position.x, shapeLine.end.Position.y));
                         if (!noIntersect) { //means there is an intersection no need to continue
@@ -238,6 +240,7 @@
                             const testLine = new Line(data[wordPoints[0]], data[wordPoints[wordPoints.length - 1]]);
                             const wordArr = wordsCollection[w];
                             const wordLine = new Line(data[wordArr[0]], data[wordArr[wordArr.lenght - 1]]);
+                            debugger;
                             noIntersect = !(intersects(testLine.start.Position.x, testLine.start.Position.y, testLine.end.Position.x, testLine.end.Position.y, wordLine.start.Position.x, wordLine.start.Position.y,
                                 wordLine.end.Position.x, wordLine.end.Position.y));
                             if (!noIntersect) {
@@ -248,6 +251,7 @@
                             wordsCollection.push(wordPoints);
                             const str = 'ID===' + wordPoints[0] + ':WD=' + myWord + ',D=' + direction;
                             appendDom(str);
+                            break;
                         }
                     }
                     
@@ -265,11 +269,11 @@
            
             // lets pick 3 random shapes if available
             const shapeTrials = [];
-            if (pickedShape.length >= 3) {
+            if (shapes.length >= 3) {
                 shapeTrials.push(getShapeKey());
                 shapeTrials.push(getShapeKey());
                 shapeTrials.push(getShapeKey());
-            } else if (pickedShape.length === 2) {
+            } else if (shapes.length === 2) {
                 shapeTrials.push('shape1');
                 shapeTrials.push('shape2');
             } else {

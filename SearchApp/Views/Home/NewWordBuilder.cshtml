@@ -424,7 +424,7 @@
                 const sceneData = scenesCollection.find(x => x.type === 'sceneData')?.data;
                 const mod = scenesCollection.find(x => x.type === 'puzzleData').data.Modulus;
                 const sectionData = sectionsStringFy();
-                const newWordArr = [];
+                let newWordArr = [];
                 sections.forEach(s => {
                    const mappedTo = s.words.map(w => {
                         return {
@@ -437,14 +437,17 @@
                    });
                     newWordArr.push(...mappedTo);
                 });
-               /* const newWordArr = wordsCollection.map(item => {
-                    return {
-                        Word: item.Word,
-                        Direction: item.Direction,
-                        ID: item.ID,
-                        Positions: item.AllWordLocations
-                    }
-                });*/
+                if (newWordArr.length === 0) {
+                        newWordArr = wordsCollection.map(item => {
+                        return {
+                            Word: item.Word,
+                            Direction: item.Direction,
+                            ID: item.ID,
+                            Positions: item.AllWordLocations
+                        }
+                    });
+                }
+               
                 const realPuzzleName = (sceneData && sceneData.PuzzleName) ? sceneData.PuzzleName : $('#ddlSelectPuzzle').val();
                 const puzzleBody = {
                     SceneName: $('#txtPuzzleName').val(),
@@ -1042,7 +1045,8 @@
             const wrapperReloadScene = (sceneData) => {
                 return (puzzleData) => {
                     loadLettersCanvas(puzzleData);
-                    rebuildWords(sceneData.Words);
+                    const words = sceneData.Words ? sceneData.Words : [];
+                    rebuildWords(words);
                     addWordsDom();
                     highlightWords();
                 }

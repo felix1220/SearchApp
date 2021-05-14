@@ -237,3 +237,4 @@ C:\projects\Go\SearchApp\SearchApp\bin\System.Diagnostics.DiagnosticSource.xml
 C:\projects\Go\SearchApp\SearchApp\bin\Microsoft.AspNet.TelemetryCorrelation.xml
 C:\projects\Go\SearchApp\SearchApp\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.xml
 C:\projects\Go\SearchApp\SearchApp\obj\Debug\SearchApp.csproj.CopyComplete
+C:\projects\SearchApp\SearchApp\obj\Debug\SearchApp.csproj.CoreCompileInputs.cache
