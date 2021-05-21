@@ -32,7 +32,7 @@
 </head>
 <body>
     <div style="width:50%;float:left">
-        <canvas id="canvas" width="500" height="500" class="controlPanel"> </canvas>
+        <canvas id="canvas" width="600" height="600" class="controlPanel"> </canvas>
 
 
     </div>
@@ -132,6 +132,18 @@
             </div>
         </div>
         <div>
+            <input type="text" size="3" id="txtPosX" />
+            &nbsp;
+            <input type="text" size="3" id="txtPosY" />
+            &nbsp;
+            <button id="btnFindId">Find ID</button>
+        </div>
+        <div>
+            <div id="showID">
+
+            </div>
+        </div>
+        <div>
             <input type="checkbox" name="chkMoveCanvas" value="canvasMove" id="chkMoveCanvas" /> Move Canvas
         </div>
         <div>
@@ -150,6 +162,8 @@
             let sceneModel = null;
             let mouseIsDown = false;
             let sections = [];
+            let hashMarkX = [];
+            let hashMarkY = [];
 
           
             const Point2D = function (x, y) {
@@ -174,7 +188,7 @@
                     updateHighlightedWords();
                     const rectData = scenesCollection.find(x => x.type === 'puzzleData').data;
                     loadLettersCanvas(rectData);
-
+                    displayHashMarks();
                 }
             };
             canvas.onmousedown = (e) => {
@@ -182,6 +196,24 @@
                 initialDown = new Point2D(currPos.x, currPos.y);
                 mouseIsDown = true;
             }
+            $('#btnFindId').click(function () {
+                const posX = +$('#txtPosX').val();
+                const posY = +$('#txtPosY').val();
+                const rectData = scenesCollection.find(x => x.type === 'puzzleData').data.AllLetters;
+                const plan = scenesCollection.find(x => x.type === 'puzzleData').data.Plan;
+                const netWidth = plan.Font + plan.Spacing;
+                //debugger;
+                const foundRect = rectData.find(f => f.Position.x >= posX && f.Position.x <= (f.Position.x + netWidth) && f.Position.y <= posY && f.Position.y >= posY - netWidth);
+                $('#showID').empty();
+
+                if (foundRect) {
+                    $('#showID').append('<b>' + foundRect.ID + '</b>')
+                } else {
+                    $('#showID').append('<b>N/A</b>')
+                }
+
+            });
+
             $('#btnSavePuzzle').click(function () {
                 postPuzzleData();
                // loadSceneData('http://localhost:5233/Data/GetSavedPuzzles', 'scenes', loadDDLComponent('ddlSelectScene'));
@@ -368,6 +400,8 @@
                     loadLettersCanvas(rectData);
                     addWordsDom();
                     saveContentStream();
+                    //loadHashMarks(rectData);
+                    displayHashMarks();
                     
 
                 }
@@ -970,6 +1004,7 @@
                             const width = data.Plan.Font;
                             const height = data.Plan.Font;
                             ctx.fillRect(rect.Position.x, newY, width, height);
+                       
                             // ctx.stroke();
 
                         if (rect.Outline) {
@@ -1041,7 +1076,37 @@
 
                 }
             }
+            const loadHashMarks = (puzzleData) => {
+                puzzleData.AllLetters.forEach((rect) => {
+                    const xh = hashMarkX.find(x => x === rect.Position.x);
+                    const yh = hashMarkY.find(x => x === rect.Position.y);
+                    if (!xh) {
+                        hashMarkX.push(rect.Position.x);
+                    }
+                    if (!yh) {
+                        hashMarkY.push(rect.Position.y);
+                    }
+                });
+            }
+            const displayHashMarks = () => {
+                hashMarkX.sort(function (a, b) { return a - b });
+                hashMarkY.sort(function (a, b) { return a - b });
+                ctx.beginPath();
+                ctx.save();
+                hashMarkX.forEach(numX => {
+                    ctx.fillText(numX.toString(), numX, 10);
+                    ctx.moveTo(numX, 0);
+                    ctx.lineTo(numX, 10);
+                })
+                hashMarkY.forEach(numY => {
+                    ctx.fillText(numY.toString(), 0, numY);
+                    ctx.moveTo(0, numY);
+                    ctx.lineTo(10, numY);
+                })
+                ctx.stroke();
+                ctx.restore();
 
+            }
             const wrapperReloadScene = (sceneData) => {
                 return (puzzleData) => {
                     loadLettersCanvas(puzzleData);
@@ -1049,6 +1114,8 @@
                     rebuildWords(words);
                     addWordsDom();
                     highlightWords();
+                    loadHashMarks(puzzleData);
+                    displayHashMarks();
                 }
               
             }
