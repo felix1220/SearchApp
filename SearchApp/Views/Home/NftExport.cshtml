@@ -24,12 +24,75 @@
 </head>
 <body>
     <div>
-        <canvas id="canvas" width="1000" height="1000" class="controlPanel"> </canvas>
+        <span>
+            <b>Select Scene:</b>
+            <select id="ddlSelectScene">
+                <option value="">--Select Scene--</option>
+            </select>
+        </span>&nbsp;
+        <span>
+            <button id="btnSavePng">Save PNG</button>
+        </span>
+       
+    </div>
+    <div>
+        <a id="link"></a>
+    </div>
+    <div>
+        <canvas id="canvas" width="2000" height="800" class="controlPanel"> </canvas>
 
 
     </div>
     <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext("2d");
         let mapped = {};
+        let scenesCollection = [];
+        const savePngImage = () => {
+            var link = document.getElementById('link');
+            link.setAttribute('download', 'Olympics.png');
+            link.setAttribute('href', canvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
+            link.click();
+        }
+        const loadData = (data) => {
+            scenesCollection = [];
+            scenesCollection.push({
+                type: 'puzzleData',
+                data: data
+            });
+        }
+        const loadLettersCanvas = (data) => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.save();
+            data.AllLetters.forEach((rect) => {
+                if (rect.IsVisible) {
+                    let strRgb = `rgba(${rect.BackgroundRed},${rect.BackgroundGreen},${rect.BackgroundBlue},1.0)`;
+
+                    ctx.fillStyle = strRgb;
+                    let newY = rect.Position.y - data.Plan.Font;
+                    const width = data.Plan.Font;
+                    const height = data.Plan.Font;
+                    ctx.fillRect(rect.Position.x, newY, width, height);
+
+                    // ctx.stroke();
+
+                    if (rect.Outline) {
+                        // console.log(rect.letter, i);
+                        let block = data.Plan.Font + data.Plan.Spacing;
+                        ctx.rect(rect.Position.x, rect.Position.y - block, width, height);
+                    }
+
+                    strRgb = `rgba(${rect.Red},${rect.Green},${rect.Blue},1.0)`;
+                    ctx.font = data.Plan.Style;
+                    ctx.fillStyle = strRgb;
+                    ctx.fillText(rect.Letter, rect.Position.x, rect.Position.y);
+                    ctx.stroke();
+                    // console.log(strRgb);
+                }
+            });
+            ctx.restore();
+        }
         const processMap = (data) => {
             const pixels = data.split(' ');
             const colorGroup = [];
@@ -50,8 +113,8 @@
                 }
 
             });
-            const result = groupSections(posGroup);
-            console.log('The sections => ', result);
+            // const result = groupSections(posGroup);
+            // console.log('The sections => ', result);
             mapped = {
                 positions: posGroup,
                 colors: colorGroup,
@@ -59,12 +122,17 @@
             };
 
         }
+        $('#btnSavePng').click(function () {
+            savePngImage();
+        });
         const url = 'http://localhost:5233/Data/GetSinglePuzzle/?puzzleName=' + 'peace-rings-color';
         const fetchScenes = fetch(url);
         fetchScenes.then(response => {
             return response.json();
         }).then(data => {
-            processMap(data.Content);
+            loadData(data);
+            loadLettersCanvas(data);
+            
         });
     </script>
 </body>
