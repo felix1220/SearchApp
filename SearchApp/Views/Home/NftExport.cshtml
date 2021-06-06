@@ -54,6 +54,12 @@
             link.setAttribute('href', canvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
             link.click();
         }
+        const loadSceneDDL = (data) => {
+             let selectScene = $('#ddlSelectScene');
+                    data.forEach(s => {
+                        selectScene.append($('<option></option>').val(s).html(s));
+                    });
+        }
         const loadData = (data) => {
             scenesCollection = [];
             scenesCollection.push({
@@ -134,6 +140,15 @@
             loadLettersCanvas(data);
             
         });
+        const scenesUrl = 'http://localhost:5233/Data/GetSavedPuzzles';
+         const fetchScenes = fetch(scenesUrl);
+        fetchScenes.then(response => {
+            return response.json();
+        }).then(data => {
+
+            loadSceneDDL(data);
+        });
+
     </script>
 </body>
 </html>
