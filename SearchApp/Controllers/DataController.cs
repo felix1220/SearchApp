@@ -108,6 +108,18 @@ namespace SearchApp.Controllers
             }
         }
         [HttpGet]
+        public ActionResult GetSceneDataObj(string name)
+        {
+            string folderPath = @"C:\projects\Go\imgprocessing\puzzle_boards\" + name.Replace(":", "#") + ".txt";
+
+            var puzzleName = name.Split(':');
+            var puzzleAnonmynous = AnamolyousPuzzle(folderPath, puzzleName[1]);
+            var jsonResult = Json(puzzleAnonmynous, JsonRequestBehavior.AllowGet);
+            jsonResult.MaxJsonLength = int.MaxValue;
+            return jsonResult;
+            
+        }
+        [HttpGet]
         public ActionResult GetSceneData(string name)
         {
             string folderPath = @"C:\projects\Go\imgprocessing\puzzle_boards\" + name.Replace(":","#") + ".txt";

@@ -39,7 +39,7 @@
         <a id="link"></a>
     </div>
     <div>
-        <canvas id="canvas" width="2000" height="800" class="controlPanel"> </canvas>
+        <canvas id="canvas" width="2000" height="1500" class="controlPanel"> </canvas>
 
 
     </div>
@@ -67,19 +67,20 @@
                 data: data
             });
         }
-        const loadLettersCanvas = (data) => {
+        const loadLettersCanvas = (data, moveDown = 0) => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.beginPath();
             ctx.save();
+           
             data.AllLetters.forEach((rect) => {
                 if (rect.IsVisible) {
-                    let strRgb = `rgba(${rect.BackgroundRed},${rect.BackgroundGreen},${rect.BackgroundBlue},1.0)`;
+                    /*let strRgb = `rgba(${rect.BackgroundRed},${rect.BackgroundGreen},${rect.BackgroundBlue},1.0)`;
 
                     ctx.fillStyle = strRgb;
                     let newY = rect.Position.y - data.Plan.Font;
                     const width = data.Plan.Font;
                     const height = data.Plan.Font;
-                    ctx.fillRect(rect.Position.x, newY, width, height);
+                    ctx.fillRect(rect.Position.x, newY, width, height);*/
 
                     // ctx.stroke();
 
@@ -92,11 +93,35 @@
                     strRgb = `rgba(${rect.Red},${rect.Green},${rect.Blue},1.0)`;
                     ctx.font = data.Plan.Style;
                     ctx.fillStyle = strRgb;
-                    ctx.fillText(rect.Letter, rect.Position.x, rect.Position.y);
+                    ctx.fillText(rect.Letter, rect.Position.x, rect.Position.y + moveDown);
                     ctx.stroke();
                     // console.log(strRgb);
                 }
             });
+            ctx.restore();
+        }
+        const ringWords = (words, plan) => {
+            const columns = words.length / 10;
+            console.log('number of columns => ', columns, words.length);
+            ctx.beginPath();
+            ctx.save();
+            ctx.font = plan.Style;
+            let startX = 0;
+            let startY = 40;
+            let colI = 0;
+            //debugger;
+            for (let i = 0; i < Math.ceil(columns); i++) {
+                startY = 20;
+                for (let x = colI; x < colI + 10; x++) {
+                    if (words[x]) {
+                        ctx.fillText(words[x].Word, startX, startY);
+                        startY += 15;
+                        ctx.stroke();
+                    }
+                }
+                colI += 10;
+                startX += 140;
+            }
             ctx.restore();
         }
         const processMap = (data) => {
@@ -131,7 +156,34 @@
         $('#btnSavePng').click(function () {
             savePngImage();
         });
-        const url = 'http://localhost:5233/Data/GetSinglePuzzle/?puzzleName=' + 'peace-rings-color';
+        $('#ddlSelectScene').on('change', () => {
+            if ($('#ddlSelectScene').val() === '') {
+                return;
+            }
+            console.log('the puzzle scene => ', $('#ddlSelectScene').val());
+            const url = 'http://localhost:5233/Data/GetLoadedSceneJson/?fileName=' +  $('#ddlSelectScene').val();
+            const fetchScenes = fetch(url);
+            fetchScenes.then(response => {
+                return response.json();
+            }).then(data => {
+                console.log('Load scene data => ', data);
+                const pUrl = 'http://localhost:5233/Data/GetSceneDataObj/?name=' + data.PuzzleName.replace('#', ':');
+                const fetchData = fetch(pUrl);
+                fetchData.then(response => {
+                    return response.json();
+                }).then(result => {
+                    loadData(result);
+                    loadLettersCanvas(result, 200);
+                    if (data.SceneName === 'ring-wip') {
+                        ringWords(data.Words, result.Plan);
+                    }
+                });
+
+            });
+
+        });
+
+        /*const url = 'http://localhost:5233/Data/GetSinglePuzzle/?puzzleName=' + 'peace-rings-color';
         const fetchScenes = fetch(url);
         fetchScenes.then(response => {
             return response.json();
@@ -139,7 +191,7 @@
             loadData(data);
             loadLettersCanvas(data);
             
-        });
+        });*/
         const scenesUrl = 'http://localhost:5233/Data/GetSavedPuzzles';
          const fetchScenes = fetch(scenesUrl);
         fetchScenes.then(response => {
