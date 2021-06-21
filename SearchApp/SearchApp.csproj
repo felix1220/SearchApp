@@ -194,6 +194,7 @@
     <Content Include="Views\Home\MergeMap.cshtml" />
     <Content Include="Views\Home\NftExport.cshtml" />
     <Content Include="Views\Home\ClusterMap.cshtml" />
+    <Content Include="Views\Home\BulkExportMap.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

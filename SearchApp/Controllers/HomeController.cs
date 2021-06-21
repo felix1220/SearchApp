@@ -74,5 +74,10 @@ namespace SearchApp.Controllers
         {
             return View();
         }
+
+        public ActionResult BulkExportMap()
+        {
+            return View();
+        }
     }
 }

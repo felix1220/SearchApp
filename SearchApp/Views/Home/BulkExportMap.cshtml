@@ -1,0 +1,73 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <title>BulkExportMap</title>
+    <style>
+        #lettersList {
+            height: 300px;
+            overflow: auto;
+        }
+    </style>
+    
+</head>
+<body>
+    <div>
+        <select id="ddlSelectBoard">
+            <option value="">--Select Board--</option>
+        </select>
+    </div>
+    <div>
+        <div id="lettersList">
+
+        </div>
+    </div>
+    <script>
+        const processData = (data) => {
+            const letters = data.split(' ');
+            letters.forEach(l => {
+                const letterParts = l.split(':');
+
+            });
+        }
+         const bindDropDown = (fileArr) => {
+            const selectScene = $('#ddlSelectBoard');
+
+            fileArr.forEach(f => {
+                selectScene.append($('<option></option>').val(f).html(f));
+            });
+        }
+        const loadFiles = () => {
+            const endPt = 'http://localhost:5233/Data/GetMergedFiles'
+            const fetchScenes = fetch(endPt);
+            fetchScenes.then(response => {
+                return response.json();
+            }).then(data => {
+                const files = data.Content;
+                bindDropDown(files)
+            });
+        }
+           $('#ddlSelectBoard').on('change', () => {
+            if ($('#ddlSelectBoard').val() === '') {
+                return;
+            }
+            var url = 'http://localhost:5233/Data/GetPuzzleBoard/?name=' + $('#ddlSelectBoard').val().replace('#',':');
+            const fetchScenes = fetch(url);
+            fetchScenes.then(response => {
+                return response.json();
+            }).then(data => {
+                console.log('data coming back => ', data.Content);
+            });
+
+        });
+        loadFiles();
+    </script>
+</body>
+</html>
