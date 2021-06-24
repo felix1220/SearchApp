@@ -39,7 +39,7 @@
         <a id="link"></a>
     </div>
     <div>
-        <canvas id="canvas" width="2000" height="1500" class="controlPanel"> </canvas>
+        <canvas id="canvas" width="2000" height="1200" class="controlPanel"> </canvas>
 
 
     </div>
@@ -106,7 +106,7 @@
             ctx.beginPath();
             ctx.save();
             ctx.font = plan.Style;
-            let startX = 0;
+            let startX = 450;
             let startY = 40;
             let colI = 0;
             //debugger;
@@ -115,7 +115,7 @@
                 for (let x = colI; x < colI + 10; x++) {
                     if (words[x]) {
                         ctx.fillText(words[x].Word, startX, startY);
-                        startY += 15;
+                        startY += 20;
                         ctx.stroke();
                     }
                 }
