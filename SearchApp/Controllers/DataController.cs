@@ -53,6 +53,22 @@ namespace SearchApp.Controllers
 
         }
         [HttpPost]
+        public void SaveMergeData(MergeModel data)
+        {
+            string fileName = data.FileName.Replace(":", "#");
+            string rootPath = @"C:\projects\Go\imgprocessing\puzzle_boards\";
+
+            if (System.IO.File.Exists(rootPath + fileName))
+            {
+                System.IO.File.Delete(rootPath + fileName);
+            }
+            using(StreamWriter wr = new StreamWriter(rootPath + fileName))
+            {
+                wr.Write(data.Content);
+            }
+        }
+
+        [HttpPost]
         public void SavePuzzle(string name, List<PixelSection> sections)
         {
 

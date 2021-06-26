@@ -1,0 +1,124 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <title>BulkExportMap</title>
+    <style>
+        #lettersList {
+            height: 500px;
+            overflow: auto;
+        }
+    </style>
+    
+</head>
+<body>
+    <div>
+        <select id="ddlSelectBoard">
+            <option value="">--Select Board--</option>
+        </select>
+    </div>
+    <div>
+        <div id="lettersList">
+
+        </div>
+    </div>
+    <div>
+        <button id="btnFileUpdate">Update file</button>
+    </div>
+    <script>
+        const letterMapper = {};
+
+        const processData = (data) => {
+            const letters = data.split(' ');
+            $('#lettersList').empty();
+            letters.forEach(l => {
+                const letterParts = l.split(':');
+                letterMapper[letterParts[0]] = {
+                    positions: letterParts[1],
+                    colors: letterParts[2]
+                };
+                const $container = $('<div />');
+                const $spanImg = $('<span style="margin-left:5px;" />');
+                const $spanWordTxt = $('<span><b>' + letterParts[0] + ':</b></span>');
+                const $input = $('<input type="text" style="width:80%" value="' + letterParts[1] + '" />')
+                const $spanContent = $('<span style="margin-left:5px;" />');
+                $spanContent.append($input);
+                $spanImg.append($spanWordTxt);
+                $container.append($spanImg)
+                $container.append($spanContent);
+                $('#lettersList').append($container);
+
+            });
+            console.log(' Mapper created =>', letterMapper);
+        }
+         const bindDropDown = (fileArr) => {
+            const selectScene = $('#ddlSelectBoard');
+
+            fileArr.forEach(f => {
+                selectScene.append($('<option></option>').val(f).html(f));
+            });
+        }
+        const loadFiles = () => {
+            const endPt = 'http://localhost:5233/Data/GetMergedFiles'
+            const fetchScenes = fetch(endPt);
+            fetchScenes.then(response => {
+                return response.json();
+            }).then(data => {
+                const files = data.Content;
+                bindDropDown(files)
+            });
+        }
+        $('#btnFileUpdate').click(function () {
+            const inputs = document.getElementsByTagName('input');
+            //console.log('inputs array => ', inputs.length, inputs[0]);
+            let accrue = '';
+            let indx = 0;
+            for (var key in letterMapper) {
+                // check if the property/key is defined in the object itself, not in parent
+                if (letterMapper.hasOwnProperty(key)) {
+                    console.log('the key => ', key);
+                    accrue += key + ':' + inputs[indx].value + ':' + letterMapper[key].colors + ' '
+                    indx++;
+                }
+            }
+            console.log('POst string => ', accrue);
+            const fileName = $('#ddlSelectBoard').val();
+            (async () => {
+                const rawResponse = await fetch('http://localhost:5233/Data/SaveMergedData', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ FileName: fileName.replace('#',':'), Content: accrue })
+                });
+                const content = await rawResponse.json();
+
+                console.log(content);
+            })();
+        });
+           $('#ddlSelectBoard').on('change', () => {
+            if ($('#ddlSelectBoard').val() === '') {
+                return;
+            }
+            var url = 'http://localhost:5233/Data/GetPuzzleBoard/?name=' + $('#ddlSelectBoard').val().replace('#',':');
+            const fetchScenes = fetch(url);
+            fetchScenes.then(response => {
+                return response.json();
+            }).then(data => {
+                //console.log('data coming back => ', data.Content);
+                processData(data.Content);
+            });
+
+        });
+        loadFiles();
+    </script>
+</body>
+</html>
