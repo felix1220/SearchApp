@@ -82,7 +82,7 @@
             let indx = 0;
             for (var key in letterMapper) {
                 // check if the property/key is defined in the object itself, not in parent
-                if (letterMapper.hasOwnProperty(key)) {
+                if (letterMapper.hasOwnProperty(key) && (/[a-zA-Z]/).test(key)) {
                     console.log('the key => ', key);
                     accrue += key + ':' + inputs[indx].value + ':' + letterMapper[key].colors + ' '
                     indx++;
@@ -91,7 +91,7 @@
             console.log('POst string => ', accrue);
             const fileName = $('#ddlSelectBoard').val();
             (async () => {
-                const rawResponse = await fetch('http://localhost:5233/Data/SaveMergedData', {
+                const rawResponse = await fetch('http://localhost:5233/Data/SaveMergeData', {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
