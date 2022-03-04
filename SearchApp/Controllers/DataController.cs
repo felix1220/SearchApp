@@ -9,6 +9,9 @@ using System.IO;
 using SearchApp.Models;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 
 namespace SearchApp.Controllers
 {
@@ -110,6 +113,17 @@ namespace SearchApp.Controllers
             });
 
 
+        }
+        [HttpGet]
+        public ActionResult GetEmojiData()
+        {
+            string jsonString = System.IO.File.ReadAllText(@"C:\projects\Go\imgprocessing\emojis.json");
+            // EmojiWrapper weatherForecast = JsonSerializer.Deserialize(jsonString);
+            //EmojiWrapper data = new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<EmojiWrapper>(jsonString);
+            var data = JsonConvert.DeserializeObject<List<Emoji>>(jsonString);
+            var jsonResult = Json(data, JsonRequestBehavior.AllowGet);
+            jsonResult.MaxJsonLength = int.MaxValue;
+            return jsonResult;
         }
         [HttpGet]
         public ActionResult GetLoadedSceneJson(string fileName)

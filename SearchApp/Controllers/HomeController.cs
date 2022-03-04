@@ -79,5 +79,15 @@ namespace SearchApp.Controllers
         {
             return View();
         }
+
+        public ActionResult TFSDemo()
+        {
+            return View();
+        }
+
+        public ActionResult Emoji()
+        {
+            return View();
+        }
     }
 }

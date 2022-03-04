@@ -131,6 +131,8 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\Emoji.cs" />
+    <Compile Include="Models\EmojiWrapper.cs" />
     <Compile Include="Models\MergeModel.cs" />
     <Compile Include="Models\PickedWord.cs" />
     <Compile Include="Models\PixelModel.cs" />
@@ -196,6 +198,8 @@
     <Content Include="Views\Home\NftExport.cshtml" />
     <Content Include="Views\Home\ClusterMap.cshtml" />
     <Content Include="Views\Home\BulkExportMap.cshtml" />
+    <Content Include="Views\Home\TFSDemo.cshtml" />
+    <Content Include="Views\Home\Emoji.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

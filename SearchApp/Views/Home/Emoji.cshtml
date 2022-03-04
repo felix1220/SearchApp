@@ -1,0 +1,102 @@
+﻿
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Emoji</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <style>
+        canvas {
+            background: white;
+            padding-left: 0;
+            padding-right: 0;
+            -webkit-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            -moz-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+        }
+        #controlPanel {
+            width: 100%;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controlPanel"> 
+        Panel Here
+    </div>
+    <div>
+        <div style="width:100%;">
+            <canvas id="canvas" width="1500" height="1500" > </canvas>
+
+
+        </div>
+    </div>
+    <script>
+        let emojiData = [];
+        const url = 'http://localhost:5233/Data/GetEmojiData';
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext("2d");
+        const findEmoji = (id) => {
+            return emojiData.find(f => f.ID === id);
+        }
+        const loadEmojiCanvas = (data,img) => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.save();
+            data.AllLetters.forEach((rect) => {
+                if (rect.IsVisible) {
+                   // let strRgb = `rgba(${rect.BackgroundRed},${rect.BackgroundGreen},${rect.BackgroundBlue},1.0)`;
+
+                   // ctx.fillStyle = strRgb;
+                    /*let newY = rect.Position.y - data.Plan.Font;
+                    const width = data.Plan.Font;
+                    const height = data.Plan.Font;
+                    ctx.fillRect(rect.Position.x, newY, width, height);
+
+                    // ctx.stroke();
+
+                    if (rect.Outline) {
+                        // console.log(rect.letter, i);
+                        let block = data.Plan.Font + data.Plan.Spacing;
+                        ctx.rect(rect.Position.x, rect.Position.y - block, width, height);
+                    }*/
+
+                    /*strRgb = `rgba(${rect.Red},${rect.Green},${rect.Blue},1.0)`;
+                    ctx.font = data.Plan.Style;
+                    ctx.fillStyle = strRgb;
+                    ctx.fillText(rect.Letter, rect.Position.x, rect.Position.y);*/
+                    const emoji = findEmoji(parseInt(rect.Letter));
+                    ctx.drawImage(img, emoji.Positions[0], emoji.Positions[1], emoji.Positions[2],emoji.Positions[3], rect.Position.x, rect.Position.y, emoji.Position[6], emoji.Position[7])
+                    ctx.stroke();
+                    // console.log(strRgb);
+                }
+            });
+            //highlightWords();
+            ctx.restore();
+        }
+        const fetchScenes = fetch(url);
+        fetchScenes.then(response => {
+            return response.json();
+        }).then(data => {
+            console.log('Emoji stuff => ', data);
+            emojiData = data;
+            let img = new Image();
+            img.src = '/Content/images/emoji-sheet-sm.png';
+            img.onload = () => {
+                const endpoint = 'http://localhost:5233/Data/GetSinglePuzzle/?puzzleName=' + 'emoji-marilyn'
+                const fetchObj = fetch(endPt);
+                fetchObj.then(response => {
+                    return response.json();
+                }).then(data => {
+                    loadEmojiCanvas(data, img);
+                });
+            };
+        });
+    </script>
+</body>
+</html>
